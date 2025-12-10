@@ -25,7 +25,7 @@
       <!-- Dynamic Component -->
       <component
         v-else
-        :is="resolveComponentMap[field.component]"
+        :is="componentMap[field.component]"
         :id="field.name"
         :type="field.type"
         v-bind="{ ...field.props, ...field.attrs }"
@@ -33,6 +33,7 @@
         @update:modelValue="onFieldChange($event, field, index)"
       />
 
+      <!-- Errors -->
       <p v-if="errors[field.name]" class="error">{{ errors[field.name] }}</p>
     </div>
   </form>
@@ -43,7 +44,7 @@ import { ref, computed , watch } from "vue";
 import { ZodError, type ZodTypeAny } from "zod";
 import { toCalendarDate, getLocalTimeZone, CalendarDate } from '@internationalized/date';
 import type { Field, ObjectGeneric } from "~/types/form-builder";
-import { resolveComponentMap } from "./ui-helper";
+import { componentMap } from "./helper";
 // Props / Emits
 const props = defineProps<{
   modelValue?: Record<string, any>;
@@ -170,6 +171,8 @@ const handleSubmit = () => {
 const isValid = computed(() => {
   return Object.values(errors.value).every((v) => v === undefined);
 });
+
+
 
 // -------------------------------------------------------------------
 // Expose Methods (optional for parent usage)

@@ -8,6 +8,7 @@ import {
   USelect,
   USelectMenu,
   UTextarea,
+  // UFileUpload
 } from "#components";
 
 export const resolveComponentMap: Record<string, any> = {
@@ -19,4 +20,5 @@ export const resolveComponentMap: Record<string, any> = {
   URadioGroup,
   UCheckbox,
   UCheckboxGroup,
+  // UFileUpload
 };

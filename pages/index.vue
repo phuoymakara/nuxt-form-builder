@@ -2,6 +2,10 @@
   <div class="w-3/5 mx-auto grid grid-cols-1 gap-6 p-10">
     <h1>Multi-Section Form Builder</h1>
 
+    <ULink to="/wizard-form" class="cursor-pointer">
+      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer">ចូល Wizard Form</UButton>
+    </ULink>
+
     <!-- Section 1: Basic Info -->
     <UCard>
       <h2>9. ព័ត៌មាននៃមនុស្ស</h2>

@@ -1,13 +1,13 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-6">
+  <form @submit.prevent="handleSubmit" class="space-y-6 ">
     <!-- Group fields by row -->
-    <div v-for="rowNumber in uniqueRows" :key="rowNumber" class="grid gap-6" :class="getGridClass(rowNumber)">
+    <div v-for="rowNumber in uniqueRows" :key="rowNumber" class="grid  gap-6" :class="getGridClass(rowNumber)">
       <div
         v-for="(field,index) in fieldsByRow(rowNumber)"
         :key="field.name"
         :class="getColumnClass(field)"
       >
-        <!-- Label -->
+        <!-- Label -->  
         <label :for="field.name" class="label">
           {{ field.label }}
         </label>
@@ -19,7 +19,18 @@
           @update:model-value="onFieldChange($event, field, index)"
         />
 
+        <UFileUpload
+          v-if="field.component === 'UFileUpload' && field.type==='file' && field.name==='avatar'"
+          :field="field"
+          accept="image/*"
+          class="w-28 h-28 object-cover"
+          :label="field.description"
+          :model-value="values[field.name]"
+          @update:model-value="onFieldChange($event, field, index)"
+        />
+
         <USelect
+          class="w-full"
           v-else-if="field.component === 'USelect'"
           :id="field.name"
           v-bind="{ ...field.props, ...field.attrs }"
@@ -59,6 +70,7 @@
           :model-value="values[field.name]"
           :disabled="isFieldDisabled(field)"
           @update:modelValue="onFieldChange($event, field, index)"
+          class="w-full"
         />
 
         <!-- Errors -->

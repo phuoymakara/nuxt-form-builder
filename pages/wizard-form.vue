@@ -7,7 +7,7 @@
     />
 
     <!-- Actions -->
-    <div class="mt-10 flex justify-between gap-4">
+    <div class="w-6/12 mx-auto mt-10 flex justify-between gap-4">
       <UButton
         variant="outline"
         :disabled="!canGoBack"

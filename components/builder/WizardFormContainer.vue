@@ -1,12 +1,12 @@
 <template>
   <div>
     <!-- Progress -->
-    <div class="bg-white border-b mb-10">
-      <div class="max-w-4xl mx-auto px-4 py-6 flex gap-6">
+    <UCard :ui="{body: 'max-w-4xl mx-auto px-4 py-6 flex gap-6', root:'my-6'}">
         <div
           v-for="(page, index) in config.pages"
           :key="page.id"
-          class="flex items-center gap-2"
+          class="flex items-center gap-2 cursor-pointer hover:opacity-80 transition"
+          @click="goTo(index)"
         >
           <div
             class="w-8 h-8 rounded-full flex items-center justify-center font-semibold"
@@ -21,11 +21,10 @@
           </div>
           <span class="text-sm">{{ page.title }}</span>
         </div>
-      </div>
-    </div>
+    </UCard>
 
-    <!-- Page -->
-    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow p-8">
+    <!-- Page Content -->
+    <UCard class="max-w-4xl mx-auto bg-white rounded-lg shadow p-8">
       <h1 class="text-2xl font-bold mb-2">
         {{ currentPage.title }}
       </h1>
@@ -34,11 +33,61 @@
         {{ currentPage.description }}
       </p>
 
-      <BuilderWizadForm
-        :ref="el => registerFormRef(currentPageIndex, el)"
-        v-model="formData[currentPage.id]"
-        :fields="currentPage.fields"
-      />
+      <!-- Single Section (flat fields) -->
+      <div v-if="currentPage.fields && !currentPage.sections">
+        <BuilderWizadForm
+          :ref="el => registerFormRef(currentPageIndex, 'main', el)"
+          v-model="formData[currentPage.id]"
+          :fields="currentPage.fields"
+        />
+      </div>
+
+      <!-- Multiple Sections (cards) -->
+      <div v-else-if="currentPage.sections" class="space-y-8">
+        <UCard
+          v-for="(section, sectionIndex) in currentPage.sections"
+          :key="section.id"
+        >
+          <!-- Section Header -->
+          <div class="mb-6">
+            <div class="flex items-start gap-3">
+              <div
+                v-if="section.icon"
+                class="mt-1"
+              >
+                <i :class="`${section.icon} text-xl text-green-600`"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">
+                  {{ section.title }}
+                </h2>
+                <p v-if="section.description" class="text-sm text-gray-600 mt-1">
+                  {{ section.description }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Fields -->
+          <BuilderWizadForm
+            :ref="el => registerFormRef(currentPageIndex, section.id, el)"
+            v-model="formData[currentPage.id][section.id]"
+            :fields="section.fields"
+          />
+        </UCard>
+      </div>
+    </UCard>
+
+    <!-- Error Summary (Optional) -->
+    <div v-if="Object.keys(pageErrors[currentPage.id]).length > 0" class="max-w-4xl mx-auto mt-4">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h3 class="font-semibold text-red-800 mb-2">Please fix the following errors:</h3>
+        <ul class="text-sm text-red-700 space-y-1">
+          <li v-for="error in pageErrors[currentPage.id]" :key="error">
+            • {{ error }}
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -51,13 +100,17 @@ interface Props {
   config: FormConfig
 }
 
+const emit = defineEmits<{
+  submit: [data: Record<string, ObjectGeneric>]
+}>()
+
 const props = defineProps<Props>()
 
 /* ---------------------------------------------------
  * State
  * --------------------------------------------------- */
 const currentPageIndex = ref(0)
-const formRefs = ref<Record<number, any>>({})
+const formRefs = ref<Record<number, Record<string, any>>>({})
 const formData = reactive<Record<string, ObjectGeneric>>({})
 const pageErrors = reactive<Record<string, any[]>>({})
 
@@ -72,6 +125,13 @@ watch(
     config.pages.forEach(page => {
       formData[page.id] ||= {}
       pageErrors[page.id] ||= []
+
+      // Initialize section data if page has sections
+      if (page.sections) {
+        page.sections.forEach(section => {
+          formData[page.id][section.id] ||= {}
+        })
+      }
     })
   },
   { immediate: true }
@@ -87,11 +147,21 @@ const currentPage = computed(() =>
 /* ---------------------------------------------------
  * Helpers
  * --------------------------------------------------- */
-const getFormRef = (index = currentPageIndex.value) =>
-  formRefs.value[index]?.value
+const getFormRef = (index = currentPageIndex.value, sectionId = 'main') => {
+  return formRefs.value[index]?.[sectionId]?.value
+}
 
-const registerFormRef = (index: number, el: any) => {
-  if (el) formRefs.value[index] = { value: el }
+const registerFormRef = (pageIndex: number, sectionId: string, el: any) => {
+  if (el) {
+    if (!formRefs.value[pageIndex]) {
+      formRefs.value[pageIndex] = {}
+    }
+    formRefs.value[pageIndex][sectionId] = { value: el }
+  }
+}
+
+const getAllPageFormRefs = (index = currentPageIndex.value) => {
+  return formRefs.value[index] || {}
 }
 
 /* ---------------------------------------------------
@@ -99,14 +169,24 @@ const registerFormRef = (index: number, el: any) => {
  * --------------------------------------------------- */
 const validatePage = (index = currentPageIndex.value): boolean => {
   const page = props.config.pages[index]
-  const formRef = getFormRef(index)
+  const allRefs = getAllPageFormRefs(index)
+  const errors: string[] = []
 
-  if (!formRef) return true
+  let isValid = true
 
-  const valid = formRef.validateAll()
+  // Validate all sections/forms on this page
+  Object.values(allRefs).forEach(ref => {
+    if (ref?.value) {
+      const valid = ref.value.validateAll()
+      if (!valid) {
+        isValid = false
+        errors.push(...(ref.value.errors || []))
+      }
+    }
+  })
 
-  pageErrors[page.id] = valid ? [] : formRef.errors
-  return valid
+  pageErrors[page.id] = errors
+  return isValid
 }
 
 const validateAll = (): boolean => {
@@ -124,10 +204,20 @@ const validateAll = (): boolean => {
  * --------------------------------------------------- */
 const savePage = (index = currentPageIndex.value) => {
   const page = props.config.pages[index]
-  const formRef = getFormRef(index)
+  const allRefs = getAllPageFormRefs(index)
 
-  if (!formRef) return
-  formData[page.id] = { ...formRef.values }
+  // Save data from all sections
+  Object.entries(allRefs).forEach(([sectionId, ref]) => {
+    if (ref?.value) {
+      if (sectionId === 'main') {
+        // Flat fields
+        formData[page.id] = { ...ref.value.values }
+      } else {
+        // Section fields
+        formData[page.id][sectionId] = { ...ref.value.values }
+      }
+    }
+  })
 }
 
 const saveAll = () => {
@@ -137,6 +227,25 @@ const saveAll = () => {
 /* ---------------------------------------------------
  * Navigation
  * --------------------------------------------------- */
+const handleNext = () => {
+  if (validatePage()) {
+    savePage()
+    next()
+  }
+}
+
+const handlePrevious = () => {
+  savePage()
+  previous()
+}
+
+const handleSubmit = () => {
+  if (validateAll()) {
+    saveAll()
+    emit('submit', { ...formData })
+  }
+}
+
 const next = () => {
   if (currentPageIndex.value < props.config.pages.length - 1) {
     currentPageIndex.value++
@@ -151,7 +260,10 @@ const previous = () => {
 
 const goTo = (index: number) => {
   if (index >= 0 && index < props.config.pages.length) {
-    currentPageIndex.value = index
+    if (validatePage()) {
+      savePage()
+      currentPageIndex.value = index
+    }
   }
 }
 

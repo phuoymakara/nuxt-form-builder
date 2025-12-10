@@ -8,7 +8,7 @@
 
     <!-- Section 1: Basic Info -->
     <UCard>
-      <h2>9. ព័ត៌មាននៃមនុស្ស</h2>
+      <h2>១. ព័ត៌មាននៃមនុស្ស</h2>
       <BuilderFormFactory
         ref="basicInfoFormRef"
         v-model="form.basicInfo"
@@ -266,91 +266,3 @@ function submitAllSections() {
   }
 }
 </script>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.section {
-  border: 1px solid #e5e7eb;
-  padding: 24px;
-  border-radius: 8px;
-  background: #f9fafb;
-}
-
-.section h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 18px;
-  color: #1f2937;
-  border-bottom: 2px solid #3b82f6;
-  padding-bottom: 10px;
-}
-
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-
-.btn-success {
-  background: #10b981;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #059669;
-}
-
-.btn-secondary {
-  background: #6b7280;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #4b5563;
-}
-
-.flex {
-  display: flex;
-}
-
-.gap-4 {
-  gap: 16px;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
-.mt-6 {
-  margin-top: 24px;
-}
-
-.mt-8 {
-  margin-top: 32px;
-}
-
-pre {
-  background: #f3f4f6;
-  padding: 16px;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-size: 12px;
-}
-</style>

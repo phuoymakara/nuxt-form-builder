@@ -102,7 +102,6 @@ export const jobApplicationFormConfig: FormConfig = {
         }
       ]
     },
-
     {
       id: "job-info",
       title: "ព័ត៌មានលម្អិតលម្អិត",
@@ -273,26 +272,3 @@ export const jobApplicationFormConfig: FormConfig = {
   previousButtonText: "ថយក្រោយ",
   nextButtonText: "បន្ទាប់"
 };
-
-// ============================================================================
-// Usage in Vue Component
-// ============================================================================
-
-// pages/job-application.vue
-/*
-<template>
-  <MultiStepFormBuilder
-    :config="jobApplicationFormConfig"
-    @submit="onFormSubmit"
-  />
-</template>
-
-<script setup lang="ts">
-import { jobApplicationFormConfig } from "~/forms/job-application-form";
-
-const onFormSubmit = (formData: Record<string, any>) => {
-  console.log("Form submitted:", formData);
-  // Send to API
-};
-</script>
-*/

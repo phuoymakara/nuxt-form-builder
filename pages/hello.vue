@@ -2,13 +2,9 @@
   <div class="w-3/5 mx-auto grid grid-cols-1 gap-6 p-10">
     <h1>Multi-Section Form Builder</h1>
 
-    <ULink to="/wizard-form" class="cursor-pointer">
-      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer">ចូល Wizard Form</UButton>
-    </ULink>
-
     <!-- Section 1: Basic Info -->
     <UCard>
-      <h2>១. ព័ត៌មាននៃមនុស្ស</h2>
+      <h2>9. ព័ត៌មាននៃមនុស្ស</h2>
       <BuilderFormFactory
         ref="basicInfoFormRef"
         v-model="form.basicInfo"
@@ -22,7 +18,7 @@
     <!-- Section 2: Job Info -->
     <UCard>
       <h2>២. ព័ត៌មានលម្អិតលម្អិត</h2>
-      <BuilderFormFactory
+      <BuilderComplexFormFactory
         ref="jobInfoFormRef"
         v-model="form.jobInfo"
         :fields="jobInfoFields"
@@ -65,7 +61,7 @@
 import { ref, reactive } from "vue";
 import { z } from "zod";
 import { CalendarDate } from "@internationalized/date";
-import type { Field } from "~/types/form-builder";
+import type { Field, FieldWithConditions } from "~/types/form-builder";
 
 // ============ SCHEMAS ============
 const basicInfoSchema = z.object({
@@ -132,59 +128,155 @@ const basicInfoFields: Field[] = [
   },
 ];
 
-const jobInfoFields: Field[] = [
-  {
-    name: "job_type",
-    label: "ប្រភេទការងារ",
-    component: "UCheckboxGroup",
-    validation: jobInfoSchema.shape["job_type"],
-    type: "",
+const jobInfoFields: FieldWithConditions[] = [
+   {
+    name: "employment_status",
+    label: "Employment Status",
+    component: "URadioGroup",
+    type: "radio",
+    validation: z.string().min(1, "Select status"),
+    row: 3,
+    colSpan: 4,
     props: {
+      defaultValue: "employed", 
       items: [
-        { label: "ការងាររដ្ឋ", value: "government" },
-        { label: "ការងារឯកជន", value: "private" },
-        { label: "អាជីវកម្មផ្ទាល់ខ្លួន", value: "self" }
+        { label: "Employed", value: "employed" },
+        { label: "Self-Employed", value: "self-employed" },
+        { label: "Unemployed", value: "unemployed" }
       ]
     }
   },
   {
+    name: "employment_type",
+    label: "Employment Type",
+    component: "USelect",
+    type: "text",
+    validation: z.string().min(1, "Select employment type"),
+    props: {
+      defaultValue: "employed", 
+      options: [
+        { label: "Employed", value: "employed" },
+        { label: "Self-Employed", value: "self-employed" },
+        { label: "Unemployed", value: "unemployed" }
+      ]
+    },
+    // defaultValue: () =>{
+    //   return "employed";
+    // }
+  },
+
+  // Show only if employed
+  {
     name: "company_name",
     label: "Company Name",
-    type: "",
     component: "UInput",
-    validation: jobInfoSchema.shape["company_name"],
+    type: "text",
+    validation: z.string().min(1, "Company name required"),
+    hidden: (values) => values.employment_type !== "employed",
     props: { placeholder: "Enter company name" }
   },
+
+  // Show only if employed
   {
     name: "position",
     label: "Position",
     component: "UInput",
-    type: "",
-    validation: jobInfoSchema.shape["position"],
-    props: { placeholder: "Enter position" }
+    type: "text",
+    validation: z.string().min(1, "Position required"),
+    hidden: (values) => values.employment_type !== "employed",
+    props: { placeholder: "Enter your position" }
   },
-    {
-    name: "salary",
-    label: "Salary",
+
+  // Show only if self-employed
+  {
+    name: "business_type",
+    label: "Business Type",
+    component: "USelect",
+    type: "text",
+    validation: z.string().optional(),
+    hidden: (values) => values.employment_type !== "self-employed",
+    props: {
+      options: [
+        { label: "Retail", value: "retail" },
+        { label: "Services", value: "services" },
+        { label: "Manufacturing", value: "manufacturing" }
+      ]
+    }
+  },
+
+  // Show only if self-employed
+  {
+    name: "business_name",
+    label: "Business Name",
     component: "UInput",
-    type: "number",
-    validation: jobInfoSchema.shape["salary"],
-    props: { placeholder: "Salary (optional)" }
+    type: "text",
+    validation: z.string().optional(),
+    dependsOn: ["employment_type"],
+    clearOnChange: true, 
+    hidden: (values) => values.employment_type !== "self-employed",
+    props: { placeholder: "Enter your business name" }
   },
-  // {
-  //   name: "business_type",
-  //   label: "business type",
-  //   component: "URadioGroup",
-  //   type: "radio",
-  //   validation: jobInfoSchema.shape["business_type"],
-  //   props: { 
-  //     placeholder: "Business",
-  //     items: [
-  //       { label: "Goverment", value: BUSINESS_TYPE.GOVERMENT },
-  //       { label: "NGO", value: BUSINESS_TYPE.NGO },
-  //     ]
-  //    }
-  // },
+
+  // Dynamic salary options based on employment type
+  {
+    name: "salary_range",
+    label: "Salary Range",
+    component: "USelect",
+    type: "text",
+    validation: z.string().optional(),
+    hidden: (values) => !values.employment_type || values.employment_type === "unemployed",
+    options: (values) => {
+      if (values.employment_type === "employed") {
+        return [
+          { label: "$20k - $40k", value: "20-40" },
+          { label: "$40k - $60k", value: "40-60" },
+          { label: "$60k - $80k", value: "60-80" },
+          { label: "$80k+", value: "80+" }
+        ];
+      }
+      if (values.employment_type === "self-employed") {
+        return [
+          { label: "$10k - $30k", value: "10-30" },
+          { label: "$30k - $50k", value: "30-50" },
+          { label: "$50k+", value: "50+" }
+        ];
+      }
+      return [];
+    },
+    props: {}
+  },
+
+  // Show all the time, populate based on business_type
+  {
+    name: "industry_details",
+    label: "Industry Details",
+    component: "UTextarea",
+    type: "text",
+    validation: z.string().optional(),
+    clearOnChange: true,
+    dependsOn: ["business_type"],
+    defaultValue: (values) => {
+      const templates: Record<string, string> = {
+        retail: "Retail business - selling products to consumers",
+        services: "Service-based business - providing professional services",
+        manufacturing: "Manufacturing business - producing goods"
+      };
+      console.log("++++++++++++",values.business_type)
+      return values.business_type || "";
+    },
+    props: { placeholder: "Industry specific details" }
+  },
+
+  // Conditional validation - show only if has salary info
+  {
+    name: "tax_id",
+    label: "Tax ID",
+    component: "UInput",
+    type: "text",
+    validation: z.string().optional(),
+    hidden: (values) => values.employment_type === "unemployed",
+    props: { placeholder: "Enter tax ID" }
+  }
 ];
 
 // ============ STATE ============

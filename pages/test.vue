@@ -2,10 +2,6 @@
   <div class="w-3/5 mx-auto grid grid-cols-1 gap-6 p-10">
     <h1>Multi-Section Form Builder</h1>
 
-    <ULink to="/wizard-form" class="cursor-pointer">
-      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer">ចូល Wizard Form</UButton>
-    </ULink>
-
     <!-- Section 1: Basic Info -->
     <UCard>
       <h2>១. ព័ត៌មាននៃមនុស្ស</h2>
@@ -22,7 +18,7 @@
     <!-- Section 2: Job Info -->
     <UCard>
       <h2>២. ព័ត៌មានលម្អិតលម្អិត</h2>
-      <BuilderFormFactory
+      <BuilderA
         ref="jobInfoFormRef"
         v-model="form.jobInfo"
         :fields="jobInfoFields"
@@ -171,20 +167,60 @@ const jobInfoFields: Field[] = [
     validation: jobInfoSchema.shape["salary"],
     props: { placeholder: "Salary (optional)" }
   },
-  // {
-  //   name: "business_type",
-  //   label: "business type",
-  //   component: "URadioGroup",
-  //   type: "radio",
-  //   validation: jobInfoSchema.shape["business_type"],
-  //   props: { 
-  //     placeholder: "Business",
-  //     items: [
-  //       { label: "Goverment", value: BUSINESS_TYPE.GOVERMENT },
-  //       { label: "NGO", value: BUSINESS_TYPE.NGO },
-  //     ]
-  //    }
-  // },
+ {
+    name: "profile_photo",
+    label: "Profile Photo",
+    component: "UFileInput",
+    type: "file",
+    validation: z.any(),
+    props: {
+      accept: "image/*", // Only images
+      placeholder: "Choose photo"
+    }
+  },
+
+  // Multiple files upload
+  {
+    name: "documents",
+    label: "Upload Documents",
+    component: "UFileInput",
+    type: "file",
+    validation: z.any().optional(),
+    props: {
+      multiple: true,
+      accept: ".pdf,.doc,.docx",
+      placeholder: "Choose files"
+    }
+  },
+
+  // PDF only
+  {
+    name: "resume",
+    label: "Resume (PDF)",
+    component: "UFileInput",
+    type: "file",
+    validation: z.any().optional(),
+    props: {
+      accept: "application/pdf",
+      placeholder: "Upload PDF only"
+    }
+  },
+
+  // Image with file size validation
+  {
+    name: "avatar",
+    label: "Avatar",
+    component: "UFileInput",
+    type: "file",
+    validation: z.any().refine(
+      (file) => !file || file.size <= 5 * 1024 * 1024, // 5MB max
+      "File size must be less than 5MB"
+    ).optional(),
+    props: {
+      accept: "image/png,image/jpeg,image/webp",
+      placeholder: "Max 5MB"
+    }
+  }
 ];
 
 // ============ STATE ============

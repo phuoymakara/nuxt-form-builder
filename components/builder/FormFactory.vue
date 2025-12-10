@@ -44,15 +44,13 @@
       <!-- Dynamic Component -->
       <component
         v-else
-        :is="resolve(field.component)"
+        :is="componentMap[field.component]"
         :id="field.name"
         :type="field.type"
         v-bind="{ ...field.props, ...field.attrs }"
         :model-value="values[field.name]"
         @update:modelValue="onFieldChange($event, field, index)"
       />
-
-
 
       <!-- Errors -->
       <p v-if="errors[field.name]" class="error">{{ errors[field.name] }}</p>
@@ -70,6 +68,7 @@ import { ref, computed, resolveComponent, watch } from "vue";
 import { ZodError, type ZodTypeAny } from "zod";
 import { toCalendarDate, getLocalTimeZone, CalendarDate } from '@internationalized/date';
 import type { Field, ObjectGeneric } from "~/types/form-builder";
+import { componentMap } from "./helper";
 // Props / Emits
 const props = defineProps<{
   modelValue?: Record<string, any>;
@@ -197,22 +196,7 @@ const isValid = computed(() => {
   return Object.values(errors.value).every((v) => v === undefined);
 });
 
-// -------------------------------------------------------------------
-// Resolve UI Component
-// -------------------------------------------------------------------
-const resolve = (name: string) => {
-  const map: Record<string, any> = {
-    UInput: resolveComponent("UInput"),
-    USelect: resolveComponent("USelect"),
-    UCheckbox: resolveComponent("UCheckbox"),
-    URadio: resolveComponent("URadio"),
-    UToggle: resolveComponent("UToggle"),
-    UTextarea: resolveComponent("UTextarea"),
-    UCheckboxGroup: resolveComponent("UCheckboxGroup"),
-    UCalendar: resolveComponent("UButton")
-  };
-  return map[name] ?? name;
-};
+
 
 // -------------------------------------------------------------------
 // Expose Methods (optional for parent usage)

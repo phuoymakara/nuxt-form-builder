@@ -37,7 +37,7 @@ export const jobApplicationFormConfig: FormConfig = {
       fields: [
         {
           name: "first_name_khmer",
-          label: "នាមខ្មែរ (ឈ្មោះ)",
+          label: "ឈ្មោះខ្មែរ ",
           component: "UInput",
           type: "text",
           row: 1,
@@ -47,7 +47,7 @@ export const jobApplicationFormConfig: FormConfig = {
         },
         {
           name: "first_name_english",
-          label: "នាម영文 (First Name)",
+          label: "ឈ្មោះឡាតាំង(Latin Name)",
           component: "UInput",
           type: "text",
           row: 1,
@@ -71,10 +71,10 @@ export const jobApplicationFormConfig: FormConfig = {
           component: "URadioGroup",
           row: 2,
           colSpan: 6,
-          type: "",
+          type: "radio",
           validation: z.string().min(1, "Required"),
           props: {
-            options: [
+            items: [
               { label: "ប្រុស", value: "M" },
               { label: "ស្រី", value: "F" }
             ]

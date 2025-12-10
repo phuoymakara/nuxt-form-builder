@@ -1,3 +1,4 @@
+import type { Component } from "vue";
 import {
   UCheckbox,
   UCheckboxGroup,

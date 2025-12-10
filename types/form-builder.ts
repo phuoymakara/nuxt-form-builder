@@ -1,14 +1,20 @@
+import type { Component } from "vue";
+import type { ZodType } from "zod";
+
 export interface ObjectGeneric {
   [keys: string]: any;
 }
 export interface Field {
-  component: any;
+  component: Component | any;
+  description?: string;
+  placeholder?: string;
+  required?: boolean;
   type: string;
   label?: string;
   name: string;
   props?: ObjectGeneric;
   attrs?: ObjectGeneric;
-  validation?: any;
+  validation?: ZodType | any;
 }
 
 export interface FieldWithConditions extends Field {

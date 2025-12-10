@@ -75,7 +75,7 @@ const handleDateChange = (val: any) => {
   }
 
   // Convert to YYYY-MM-DD string
-  const formatted = dateValue.toDate(getLocalTimeZone()).toISOString().split('T')[0];
+  const formatted = dateValue.toString()
   emit('update:modelValue', formatted);
 };
 </script>

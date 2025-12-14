@@ -36,6 +36,140 @@ export type ObjectGeneric = Record<string, any>;
 import { z } from "zod";
 import type { FieldWithConditions } from "~/types/form-builder";
 
+
+export const addressFieldsConfig = [
+  {
+    name: "province",
+    label: "ខេត្ត/ក្រុង",
+    component: "UAddress",
+    type: "select",
+    row: 4,
+    colSpan: 6,
+    clearOnChange: true,
+    validation: 
+    z.any().superRefine((val, ctx) => {
+      if (!val || typeof val !== "object") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "សូមជ្រើសរើសខេត្ត"
+        });
+      }
+    }),
+    // .min(1, "សូមជ្រើសរើសខេត្ត"),
+    props: {
+      placeholder: "ជ្រើសរើសខេត្ត...",
+      apiEndpoint: "/api/address/provinces",
+      searchable: true,
+      clearable: true,
+      labelKey: "name_kh",
+      valueKey: "code"
+    }
+  },
+  {
+    name: "district",
+    label: "ស្រុក/ក្រុង",
+    component: "UAddress",
+    type: "select",
+    row: 4,
+    colSpan: 6,
+    validation: 
+     z.any().superRefine((val, ctx) => {
+      if (!val || typeof val !== "object") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "សូមជ្រើសរើសស្រុក"
+        });
+      }
+    }),
+    dependsOn: ["province"],
+    // hidden: (values) => !values.province,
+    clearOnChange: true,
+    props: {
+      placeholder: "ជ្រើសរើសស្រុក...",
+      apiEndpoint: "/api/address/districts",
+      searchable: true,
+      clearable: false,
+      labelKey: "name_kh",
+      valueKey: "code",
+      queryParams: (values:any) => {
+        // Extract code from province value (it's already a code string)
+        return values.province ? { province_code: values.province?.code  } : {}
+      }
+    }
+  },
+  {
+    name: "commune",
+    label: "ឃុំ/សង្កាត់",
+    component: "UAddress",
+    type: "select",
+    row: 5,
+    colSpan: 6,
+    validation: z.any().superRefine((val, ctx) => {
+      if (!val || typeof val !== "object") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ជ្រើសរើសឃុំ/សង្កាត់"
+        });
+      }
+    }),
+    dependsOn: ["district","province"],
+    // hidden: (values:any) => !values.district,
+    clearOnChange: true,
+    props: {
+      placeholder: "ជ្រើសរើសឃុំ...",
+      apiEndpoint: "/api/address/communes",
+      searchable: true,
+      clearable: true,
+      labelKey: "name_kh",
+      valueKey: "code",
+      queryParams: (values:any) => {
+        return values.district ? { district_code: values.district?.code } : {}
+      }
+    }
+  },
+  {
+    name: "village",
+    label: "ភូមិ",
+    component: "UAddress",
+    type: "select",
+    row: 5,
+    colSpan: 6,
+    validation: z.any().superRefine((val, ctx) => {
+      if (!val || typeof val !== "object") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ជ្រើសរើសភូមិ"
+        });
+      }
+    }),
+    dependsOn: ["commune","district","province"],
+    // hidden: (values:any) => !values.commune,
+    clearOnChange: true,
+    props: {
+      placeholder: "ជ្រើសរើសភូមិ...",
+      apiEndpoint: "/api/address/villages",
+      searchable: true,
+      clearable: true,
+      labelKey: "name_kh",
+      valueKey: "code",
+      queryParams: (values:any) => {
+        return values.commune ? { commune_code: values.commune?.code } : {}
+      }
+    }
+  },
+  {
+    name: "streetAddress",
+    label: "ផ្ទះលេខ/ផ្លូវ",
+    component: "UInput",
+    type: "text",
+    row: 6,
+    colSpan: 12,
+    validation: z.string().min(5, "សូមបញ្ចូលលម្អិត").optional(),
+    props: {
+      placeholder: "បញ្ចូលលម្អិត ឧ: ផ្ទះលេខ ៥៣, ផ្លូវលេខ ៩៣..."
+    }
+  }
+];
 export const jobApplicationFormConfig: FormConfig = {
   pages: [
     {
@@ -180,7 +314,8 @@ export const jobApplicationFormConfig: FormConfig = {
               colSpan: 6,
               validation: z.string().min(8, "Invalid phone"),
               props: { placeholder: "+855..." }
-            }
+            },
+            ...addressFieldsConfig
           ]
         },
         {
@@ -285,7 +420,7 @@ export const jobApplicationFormConfig: FormConfig = {
               colSpan: 12,
               validation: z.string().optional(),
               props: { placeholder: "បទពិសោធន៍ការងារ" }
-            }
+            },
           ]
         }
       ]

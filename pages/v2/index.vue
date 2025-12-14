@@ -68,7 +68,7 @@ const toast = useToast();
 async function handleSubmit(data: any) {
   console.table("Form submitted:", data);
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   toast.add({
     title: "Success!",
@@ -81,9 +81,7 @@ async function handleSubmit(data: any) {
   <div class="min-h-screen">
     <UContainer class="py-16">
       <div class="mx-auto max-w-2xl">
-        <h1 class="mb-2 text-4xl font-bold">
-          Form Builder
-        </h1>
+        <h1 class="mb-2 text-4xl font-bold">Form Builder</h1>
         <p class="mb-12 text-gray-400">
           Type-safe forms with Zod validation and Nuxt UI
         </p>
@@ -94,9 +92,7 @@ async function handleSubmit(data: any) {
               <UButton type="button" @click="console.log(state)">
                 Log State
               </UButton>
-              <UButton type="submit">
-                Submit
-              </UButton>
+              <UButton type="submit"> Submit </UButton>
             </div>
           </template>
         </ContactForm>

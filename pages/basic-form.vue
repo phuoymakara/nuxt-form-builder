@@ -45,13 +45,17 @@
     </div>
 
     <!-- Form State Display -->
-    <pre class="mt-6 p-4 bg-gray-100 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
-    
+    <pre class="mt-6 p-4 bg-gray-100 rounded">{{
+      JSON.stringify(form, null, 2)
+    }}</pre>
+
     <!-- Validation Errors Display -->
     <div v-if="allErrors.length" class="mt-4 p-4 bg-red-100 rounded">
       <h3 class="font-bold mb-2">Errors:</h3>
       <ul>
-        <li v-for="error in allErrors" :key="error" class="text-red-600">{{ error }}</li>
+        <li v-for="error in allErrors" :key="error" class="text-red-600">
+          {{ error }}
+        </li>
       </ul>
     </div>
   </div>
@@ -74,10 +78,9 @@ const basicInfoSchema = z.object({
 enum BUSINESS_TYPE {
   COMPANY = "COMAPNY",
   NGO = "NGO",
-  GOVERMENT = "GOVERMENT"
+  GOVERMENT = "GOVERMENT",
 }
 const jobInfoSchema = z.object({
-
   job_type: z.array(z.string()).min(1, "Select at least one job type"),
   company_name: z.string().min(1, "Company name required"),
   position: z.string().min(1, "Position required"),
@@ -95,7 +98,7 @@ const basicInfoFields: Field[] = [
     component: "UInput",
     type: "email",
     validation: basicInfoSchema.shape["email"],
-    props: { placeholder: "Enter email" }
+    props: { placeholder: "Enter email" },
   },
   {
     name: "age",
@@ -103,7 +106,7 @@ const basicInfoFields: Field[] = [
     component: "UInput",
     type: "number",
     validation: basicInfoSchema.shape["age"],
-    props: { placeholder: "Age" }
+    props: { placeholder: "Age" },
   },
   {
     name: "gender",
@@ -114,9 +117,9 @@ const basicInfoFields: Field[] = [
     props: {
       options: [
         { label: "Male", value: "M" },
-        { label: "Female", value: "F" }
-      ]
-    }
+        { label: "Female", value: "F" },
+      ],
+    },
   },
   {
     name: "birth_date",
@@ -124,12 +127,12 @@ const basicInfoFields: Field[] = [
     type: "text",
     component: "UCalendar",
     validation: basicInfoSchema.shape["birth_date"],
-    props: {}
+    props: {},
   },
 ];
 
 const jobInfoFields: FieldWithConditions[] = [
-   {
+  {
     name: "employment_status",
     label: "Employment Status",
     component: "URadioGroup",
@@ -138,13 +141,13 @@ const jobInfoFields: FieldWithConditions[] = [
     row: 3,
     colSpan: 4,
     props: {
-      defaultValue: "employed", 
+      defaultValue: "employed",
       items: [
         { label: "Employed", value: "employed" },
         { label: "Self-Employed", value: "self-employed" },
-        { label: "Unemployed", value: "unemployed" }
-      ]
-    }
+        { label: "Unemployed", value: "unemployed" },
+      ],
+    },
   },
   {
     name: "employment_type",
@@ -153,12 +156,12 @@ const jobInfoFields: FieldWithConditions[] = [
     type: "text",
     validation: z.string().min(1, "Select employment type"),
     props: {
-      defaultValue: "employed", 
+      defaultValue: "employed",
       options: [
         { label: "Employed", value: "employed" },
         { label: "Self-Employed", value: "self-employed" },
-        { label: "Unemployed", value: "unemployed" }
-      ]
+        { label: "Unemployed", value: "unemployed" },
+      ],
     },
     // defaultValue: () =>{
     //   return "employed";
@@ -173,7 +176,7 @@ const jobInfoFields: FieldWithConditions[] = [
     type: "text",
     validation: z.string().min(1, "Company name required"),
     hidden: (values) => values.employment_type !== "employed",
-    props: { placeholder: "Enter company name" }
+    props: { placeholder: "Enter company name" },
   },
 
   // Show only if employed
@@ -184,7 +187,7 @@ const jobInfoFields: FieldWithConditions[] = [
     type: "text",
     validation: z.string().min(1, "Position required"),
     hidden: (values) => values.employment_type !== "employed",
-    props: { placeholder: "Enter your position" }
+    props: { placeholder: "Enter your position" },
   },
 
   // Show only if self-employed
@@ -199,9 +202,9 @@ const jobInfoFields: FieldWithConditions[] = [
       options: [
         { label: "Retail", value: "retail" },
         { label: "Services", value: "services" },
-        { label: "Manufacturing", value: "manufacturing" }
-      ]
-    }
+        { label: "Manufacturing", value: "manufacturing" },
+      ],
+    },
   },
 
   // Show only if self-employed
@@ -212,9 +215,9 @@ const jobInfoFields: FieldWithConditions[] = [
     type: "text",
     validation: z.string().optional(),
     dependsOn: ["employment_type"],
-    clearOnChange: true, 
+    clearOnChange: true,
     hidden: (values) => values.employment_type !== "self-employed",
-    props: { placeholder: "Enter your business name" }
+    props: { placeholder: "Enter your business name" },
   },
 
   // Dynamic salary options based on employment type
@@ -224,26 +227,27 @@ const jobInfoFields: FieldWithConditions[] = [
     component: "USelect",
     type: "text",
     validation: z.string().optional(),
-    hidden: (values) => !values.employment_type || values.employment_type === "unemployed",
+    hidden: (values) =>
+      !values.employment_type || values.employment_type === "unemployed",
     options: (values) => {
       if (values.employment_type === "employed") {
         return [
           { label: "$20k - $40k", value: "20-40" },
           { label: "$40k - $60k", value: "40-60" },
           { label: "$60k - $80k", value: "60-80" },
-          { label: "$80k+", value: "80+" }
+          { label: "$80k+", value: "80+" },
         ];
       }
       if (values.employment_type === "self-employed") {
         return [
           { label: "$10k - $30k", value: "10-30" },
           { label: "$30k - $50k", value: "30-50" },
-          { label: "$50k+", value: "50+" }
+          { label: "$50k+", value: "50+" },
         ];
       }
       return [];
     },
-    props: {}
+    props: {},
   },
 
   // Show all the time, populate based on business_type
@@ -259,12 +263,12 @@ const jobInfoFields: FieldWithConditions[] = [
       const templates: Record<string, string> = {
         retail: "Retail business - selling products to consumers",
         services: "Service-based business - providing professional services",
-        manufacturing: "Manufacturing business - producing goods"
+        manufacturing: "Manufacturing business - producing goods",
       };
-      console.log("++++++++++++",values.business_type)
+      console.log("++++++++++++", values.business_type);
       return values.business_type || "";
     },
-    props: { placeholder: "Industry specific details" }
+    props: { placeholder: "Industry specific details" },
   },
 
   // Conditional validation - show only if has salary info
@@ -275,14 +279,14 @@ const jobInfoFields: FieldWithConditions[] = [
     type: "text",
     validation: z.string().optional(),
     hidden: (values) => values.employment_type === "unemployed",
-    props: { placeholder: "Enter tax ID" }
-  }
+    props: { placeholder: "Enter tax ID" },
+  },
 ];
 
 // ============ STATE ============
 const form = reactive({
   basicInfo: {},
-  jobInfo: {}
+  jobInfo: {},
 });
 
 const allErrors = ref<string[]>([]);
@@ -331,10 +335,10 @@ function submitSection(section: "basicInfo" | "jobInfo") {
 function validateAllSections() {
   const basicInfoValid = basicInfoFormRef.value?.validateAll();
   const jobInfoValid = jobInfoFormRef.value?.validateAll();
-  
+
   console.log("BASIC INFO VALID:", basicInfoValid);
   console.log("JOB INFO VALID:", jobInfoValid);
-  
+
   if (basicInfoValid && jobInfoValid) {
     alert("All sections are valid!");
   } else {
@@ -346,11 +350,11 @@ function submitAllSections() {
   allErrors.value = [];
   const basicInfoValid = basicInfoFormRef.value?.validateAll();
   const jobInfoValid = jobInfoFormRef.value?.validateAll();
-  
+
   if (basicInfoValid && jobInfoValid) {
     console.log("ALL SECTIONS SUBMITTED", {
       basicInfo: form.basicInfo,
-      jobInfo: form.jobInfo
+      jobInfo: form.jobInfo,
     });
     alert("All sections submitted successfully!");
   } else {

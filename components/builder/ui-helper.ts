@@ -8,7 +8,7 @@ import {
   USelect,
   USelectMenu,
   UTextarea,
-  // UFileUpload 
+  // UFileUpload
 } from "#components";
 
 export const resolveComponentMap: Record<string, any> = {

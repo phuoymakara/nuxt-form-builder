@@ -19,12 +19,16 @@
                 currentPageIndex === index
                   ? 'bg-green-600 text-white ring-4 ring-green-200'
                   : canAccessPage(index)
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed',
               ]"
             >
               <UIcon
-                v-if="canAccessPage(index) && currentPageIndex !== index && index < currentPageIndex"
+                v-if="
+                  canAccessPage(index) &&
+                  currentPageIndex !== index &&
+                  index < currentPageIndex
+                "
                 name="i-heroicons-check"
               />
               <span v-else>{{ index + 1 }}</span>
@@ -43,7 +47,7 @@
               v-if="index < config.pages.length - 1"
               :class="[
                 'h-1 flex-1 mx-4 transition-colors',
-                index < currentPageIndex ? 'bg-green-600' : 'bg-gray-200'
+                index < currentPageIndex ? 'bg-green-600' : 'bg-gray-200',
               ]"
             />
           </div>
@@ -97,12 +101,7 @@
             {{ config.nextButtonText || "Next" }}
           </UButton>
 
-          <UButton
-            v-else
-            color="primary"
-            size="lg"
-            @click="submitForm"
-          >
+          <UButton v-else color="primary" size="lg" @click="submitForm">
             {{ config.submitButtonText || "Submit" }}
           </UButton>
         </div>
@@ -150,7 +149,7 @@ watch(
       pageErrors[page.id] = [];
     });
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // ===================================================================
@@ -188,7 +187,7 @@ const previousPage = () => {
 const nextPage = async () => {
   // Validate current page before moving to next
   const formRef = formRefs.value[`formRef_${currentPageIndex.value}`]?.value;
-  
+
   if (!formRef) {
     console.error("Form ref not found");
     return;
@@ -199,7 +198,7 @@ const nextPage = async () => {
   if (!isValid) {
     emit("error", {
       page: currentPage.value.id,
-      errors: formRef.errors
+      errors: formRef.errors,
     });
     return;
   }
@@ -234,7 +233,7 @@ const submitForm = async () => {
   for (let i = 0; i < props.config.pages.length; i++) {
     const page = props.config.pages[i];
     const formRef = formRefs.value[`formRef_${i}`]?.value;
-    
+
     if (!formRef) continue;
 
     if (!formRef.validateAll()) {

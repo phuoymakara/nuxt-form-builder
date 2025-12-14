@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import type { FormConfig, FormPage } from '~/constants/form-builder';
-import type { FieldWithConditions } from '~/types/form-builder';
+import { z } from "zod";
+import type { FormConfig, FormPage } from "~/constants/form-builder";
+import type { FieldWithConditions } from "~/types/form-builder";
 
 /**
  * FormBuilder - Builds and manages Zod schema from FormConfig
@@ -20,7 +20,7 @@ export class FormBuilder {
    */
   private buildSchemas(): void {
     const fields = this.getAllFields();
-    fields.forEach(field => {
+    fields.forEach((field) => {
       this.schemaMap.set(field.name, field.validation);
     });
   }
@@ -31,7 +31,7 @@ export class FormBuilder {
   private getAllFields(): FieldWithConditions[] {
     const fields: FieldWithConditions[] = [];
 
-    this.config.pages.forEach(page => {
+    this.config.pages.forEach((page) => {
       // Handle flat fields (legacy)
       if (page.fields) {
         fields.push(...page.fields);
@@ -39,7 +39,7 @@ export class FormBuilder {
 
       // Handle sections
       if (page.sections) {
-        page.sections.forEach(section => {
+        page.sections.forEach((section) => {
           fields.push(...section.fields);
         });
       }
@@ -65,13 +65,13 @@ export class FormBuilder {
    * Get schema for specific page
    */
   getPageSchema(pageId: string): z.ZodObject<any> | null {
-    const page = this.config.pages.find(p => p.id === pageId);
+    const page = this.config.pages.find((p) => p.id === pageId);
     if (!page) return null;
 
     const shape: Record<string, z.ZodTypeAny> = {};
 
     const fields = this.getPageFields(page);
-    fields.forEach(field => {
+    fields.forEach((field) => {
       const schema = this.schemaMap.get(field.name);
       if (schema) {
         shape[field.name] = schema;
@@ -92,7 +92,7 @@ export class FormBuilder {
     }
 
     if (page.sections) {
-      page.sections.forEach(section => {
+      page.sections.forEach((section) => {
         fields.push(...section.fields);
       });
     }
@@ -117,18 +117,20 @@ export class FormBuilder {
   /**
    * Get all form fields with default values injected into props
    */
-  getAllFormFieldsWithDefaults(data?: Record<string, any>): FieldWithConditions[] {
+  getAllFormFieldsWithDefaults(
+    data?: Record<string, any>,
+  ): FieldWithConditions[] {
     const valuesBuilder = new InitialValuesBuilder(this.config);
-    const initialValues = data 
+    const initialValues = data
       ? valuesBuilder.getEditInitialValues(data)
       : valuesBuilder.getInitialValues();
 
-    return this.getAllFields().map(field => ({
+    return this.getAllFields().map((field) => ({
       ...field,
       props: {
         ...field.props,
-        defaultValue: initialValues[field.name]
-      }
+        defaultValue: initialValues[field.name],
+      },
     }));
   }
 
@@ -136,27 +138,30 @@ export class FormBuilder {
    * Get field by name
    */
   getField(fieldName: string): FieldWithConditions | undefined {
-    return this.getAllFields().find(f => f.name === fieldName);
+    return this.getAllFields().find((f) => f.name === fieldName);
   }
 
   /**
    * Get field by name with default value injected
    */
-  getFieldWithDefault(fieldName: string, data?: Record<string, any>): FieldWithConditions | undefined {
+  getFieldWithDefault(
+    fieldName: string,
+    data?: Record<string, any>,
+  ): FieldWithConditions | undefined {
     const valuesBuilder = new InitialValuesBuilder(this.config);
     const initialValues = data
       ? valuesBuilder.getEditInitialValues(data)
       : valuesBuilder.getInitialValues();
 
-    const field = this.getAllFields().find(f => f.name === fieldName);
+    const field = this.getAllFields().find((f) => f.name === fieldName);
     if (!field) return undefined;
 
     return {
       ...field,
       props: {
         ...field.props,
-        defaultValue: initialValues[fieldName]
-      }
+        defaultValue: initialValues[fieldName],
+      },
     };
   }
 
@@ -192,7 +197,7 @@ export class InitialValuesBuilder {
     const fields = this.builder.getAllFormFields();
     const values: Record<string, any> = {};
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       values[field.name] = this.getFieldDefaultValue(field);
     });
 
@@ -202,17 +207,17 @@ export class InitialValuesBuilder {
   /**
    * Generate initial values for EDIT mode (merge user data with defaults)
    * User data takes precedence over config defaults
-   * 
+   *
    * @param userData - Existing data from API/database
    * @returns Merged initial values with all fields populated
    */
   getEditInitialValues(userData: Record<string, any>): Record<string, any> {
     const defaultValues = this.getInitialValues();
-    
+
     // Merge: defaults first, then override with user data
     const merged: Record<string, any> = {
       ...defaultValues,
-      ...userData
+      ...userData,
     };
 
     return merged;
@@ -230,7 +235,9 @@ export class InitialValuesBuilder {
    * Get type-safe edit initial values
    * Usage: const values = builder.getTypedEditInitialValues<typeof yourType>(userData);
    */
-  getTypedEditInitialValues<T = Record<string, any>>(userData: Record<string, any>): T {
+  getTypedEditInitialValues<T = Record<string, any>>(
+    userData: Record<string, any>,
+  ): T {
     return this.getEditInitialValues(userData) as T;
   }
 
@@ -247,31 +254,31 @@ export class InitialValuesBuilder {
 
     // Priority 2: Handle different component types
     switch (field.component) {
-      case 'UCheckboxGroup':
-      case 'UCheckbox':
+      case "UCheckboxGroup":
+      case "UCheckbox":
         return [];
 
-      case 'URadioGroup':
-      case 'USelect':
-      case 'UAsyncSelect':
-      case 'USelectMenu':
-        return this.isOptionalField(schema) ? null : '';
+      case "URadioGroup":
+      case "USelect":
+      case "UAsyncSelect":
+      case "USelectMenu":
+        return this.isOptionalField(schema) ? null : "";
 
-      case 'UFileInput':
-      case 'UFileUpload':
+      case "UFileInput":
+      case "UFileUpload":
         return null;
 
-      case 'UCalendar':
-      case 'UDatePicker':
+      case "UCalendar":
+      case "UDatePicker":
         return null;
 
-      case 'UTextarea':
-      case 'UInput':
+      case "UTextarea":
+      case "UInput":
       default:
-        if (field.type === 'number') {
+        if (field.type === "number") {
           return null;
         }
-        return this.isOptionalField(schema) ? '' : '';
+        return this.isOptionalField(schema) ? "" : "";
     }
   }
 
@@ -287,13 +294,13 @@ export class InitialValuesBuilder {
    * Get initial values for specific page only
    */
   getPageInitialValues(pageId: string): Record<string, any> {
-    const page = this.config.pages.find(p => p.id === pageId);
+    const page = this.config.pages.find((p) => p.id === pageId);
     if (!page) return {};
 
     const values: Record<string, any> = {};
     const fields = this.getPageFields(page);
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       values[field.name] = this.getFieldDefaultValue(field);
     });
 
@@ -303,11 +310,14 @@ export class InitialValuesBuilder {
   /**
    * Get page initial values for EDIT mode
    */
-  getPageEditInitialValues(pageId: string, userData: Record<string, any>): Record<string, any> {
+  getPageEditInitialValues(
+    pageId: string,
+    userData: Record<string, any>,
+  ): Record<string, any> {
     const defaultValues = this.getPageInitialValues(pageId);
     return {
       ...defaultValues,
-      ...userData
+      ...userData,
     };
   }
 
@@ -322,7 +332,10 @@ export class InitialValuesBuilder {
     try {
       return schema.parse(initialValues);
     } catch (error) {
-      console.warn('Initial values validation failed, returning defaults', error);
+      console.warn(
+        "Initial values validation failed, returning defaults",
+        error,
+      );
       return initialValues;
     }
   }
@@ -330,14 +343,19 @@ export class InitialValuesBuilder {
   /**
    * Get validated edit initial values
    */
-  getValidatedEditInitialValues(userData: Record<string, any>): Record<string, any> {
+  getValidatedEditInitialValues(
+    userData: Record<string, any>,
+  ): Record<string, any> {
     const schema = this.builder.getFormSchema();
     const initialValues = this.getEditInitialValues(userData);
 
     try {
       return schema.parse(initialValues);
     } catch (error) {
-      console.warn('Edit initial values validation failed, returning merged values', error);
+      console.warn(
+        "Edit initial values validation failed, returning merged values",
+        error,
+      );
       return initialValues;
     }
   }
@@ -353,7 +371,7 @@ export class InitialValuesBuilder {
     }
 
     if (page.sections) {
-      page.sections.forEach(section => {
+      page.sections.forEach((section) => {
         fields.push(...section.fields);
       });
     }
@@ -370,13 +388,17 @@ export class InitialValuesBuilder {
  * Composable for easy form management
  * Handles both CREATE and EDIT modes
  */
-export const useFormBuilder = (config: FormConfig, mode: 'create' | 'edit' = 'create', editData?: Record<string, any>) => {
+export const useFormBuilder = (
+  config: FormConfig,
+  mode: "create" | "edit" = "create",
+  editData?: Record<string, any>,
+) => {
   const builder = new FormBuilder(config);
   const valuesBuilder = new InitialValuesBuilder(config);
 
   // Get initial values based on mode
   const getInitialFormValues = () => {
-    if (mode === 'edit' && editData) {
+    if (mode === "edit" && editData) {
       return valuesBuilder.getEditInitialValues(editData);
     }
     return valuesBuilder.getInitialValues();
@@ -384,7 +406,7 @@ export const useFormBuilder = (config: FormConfig, mode: 'create' | 'edit' = 'cr
 
   // Get page initial values based on mode
   const getPageValues = (pageId: string) => {
-    if (mode === 'edit' && editData) {
+    if (mode === "edit" && editData) {
       return valuesBuilder.getPageEditInitialValues(pageId, editData);
     }
     return valuesBuilder.getPageInitialValues(pageId);
@@ -393,17 +415,21 @@ export const useFormBuilder = (config: FormConfig, mode: 'create' | 'edit' = 'cr
   // Get config with default values injected
   const getConfigWithDefaults = (): FormConfig => {
     const fieldsWithDefaults = builder.getAllFormFieldsWithDefaults(editData);
-    
+
     return {
       ...config,
-      pages: config.pages.map(page => ({
+      pages: config.pages.map((page) => ({
         ...page,
-        fields: page.fields?.map(f => fieldsWithDefaults.find(fd => fd.name === f.name) || f),
-        sections: page.sections?.map(section => ({
+        fields: page.fields?.map(
+          (f) => fieldsWithDefaults.find((fd) => fd.name === f.name) || f,
+        ),
+        sections: page.sections?.map((section) => ({
           ...section,
-          fields: section.fields.map(f => fieldsWithDefaults.find(fd => fd.name === f.name) || f)
-        }))
-      }))
+          fields: section.fields.map(
+            (f) => fieldsWithDefaults.find((fd) => fd.name === f.name) || f,
+          ),
+        })),
+      })),
     };
   };
 
@@ -418,16 +444,18 @@ export const useFormBuilder = (config: FormConfig, mode: 'create' | 'edit' = 'cr
     getPageValues,
     getField: (fieldName: string) => builder.getField(fieldName),
     getAllFields: () => builder.getAllFormFields(),
-    getAllFormFieldsWithDefaults: (data?: Record<string, any>) => builder.getAllFormFieldsWithDefaults(data),
+    getAllFormFieldsWithDefaults: (data?: Record<string, any>) =>
+      builder.getAllFormFieldsWithDefaults(data),
 
     // Config with defaults
     getConfig: () => config,
     getConfigWithDefaults,
-    getFieldWithDefault: (fieldName: string) => builder.getFieldWithDefault(fieldName, editData),
+    getFieldWithDefault: (fieldName: string) =>
+      builder.getFieldWithDefault(fieldName, editData),
 
     // Utilities
-    isEditMode: mode === 'edit',
+    isEditMode: mode === "edit",
     mode,
-    config
+    config,
   };
 };

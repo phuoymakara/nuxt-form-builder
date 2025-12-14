@@ -1,7 +1,6 @@
 <template>
   <form @submit.prevent="handleSubmit">
     <div v-for="(field, index) in props.fields" :key="field.name" class="mb-4">
-
       <!-- Label -->
       <label :for="field.name" class="label">
         {{ field.label }}
@@ -14,7 +13,7 @@
         @update:model-value="onFieldChange($event, field, index)"
       />
 
-        <USelect
+      <USelect
         v-else-if="field.component === 'USelect'"
         :id="field.name"
         v-bind="{ ...field.props, ...field.attrs }"
@@ -40,9 +39,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed , watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { ZodError, type ZodTypeAny } from "zod";
-import { toCalendarDate, getLocalTimeZone, CalendarDate } from '@internationalized/date';
+import {
+  toCalendarDate,
+  getLocalTimeZone,
+  CalendarDate,
+} from "@internationalized/date";
 import type { Field, ObjectGeneric } from "~/types/form-builder";
 import { componentMap } from "./helper";
 // Props / Emits
@@ -51,12 +54,7 @@ const props = defineProps<{
   fields: Field[];
 }>();
 
-const emit = defineEmits([
-  "update:modelValue",
-  "validate",
-  "submit",
-  "error"
-]);
+const emit = defineEmits(["update:modelValue", "validate", "submit", "error"]);
 
 // -------------------------------------------------------------------
 // Internal State
@@ -74,9 +72,13 @@ props.fields.forEach((f) => {
 });
 
 // Sync back to parent (v-model)
-watch(values, (v) => {
-  emit("update:modelValue", { ...v });
-},{deep: true});
+watch(
+  values,
+  (v) => {
+    emit("update:modelValue", { ...v });
+  },
+  { deep: true },
+);
 
 // -------------------------------------------------------------------
 // Single Field Validation
@@ -98,7 +100,6 @@ const validateField = (name: string, value: any, validator?: ZodTypeAny) => {
   return { valid: false, message: "Invalid value" };
 };
 
-
 // -------------------------------------------------------------------
 // Update Field Handler
 // -------------------------------------------------------------------
@@ -111,17 +112,17 @@ const onFieldChange = (value: any, field: Field, index: number) => {
   }
 
   // If calendar → convert Date object to string
-//   if (field.component === "UCalendar") {
-//     if (value instanceof CalendarDate) {
-//         // console.log(value)
-//         const jsDate = value.toDate(getLocalTimeZone());
-//         // Format as YYYY-MM-DD string
-//         value = jsDate.toISOString().split("T")[0];
-//     }
-//   }
+  //   if (field.component === "UCalendar") {
+  //     if (value instanceof CalendarDate) {
+  //         // console.log(value)
+  //         const jsDate = value.toDate(getLocalTimeZone());
+  //         // Format as YYYY-MM-DD string
+  //         value = jsDate.toISOString().split("T")[0];
+  //     }
+  //   }
 
   values.value[field.name] = value;
-  
+
   const { valid, message } = validateField(field.name, value, field.validation);
   errors.value[field.name] = valid ? undefined : message;
 
@@ -143,7 +144,7 @@ const validateAll = () => {
     const { valid, message } = validateField(
       field.name,
       values.value[field.name],
-      field.validation
+      field.validation,
     );
     if (!valid) allValid = false;
     errors.value[field.name] = valid ? undefined : message;
@@ -172,8 +173,6 @@ const isValid = computed(() => {
   return Object.values(errors.value).every((v) => v === undefined);
 });
 
-
-
 // -------------------------------------------------------------------
 // Expose Methods (optional for parent usage)
 // -------------------------------------------------------------------
@@ -182,7 +181,7 @@ defineExpose({
   submit: handleSubmit,
   values,
   errors,
-  isValid
+  isValid,
 });
 </script>
 

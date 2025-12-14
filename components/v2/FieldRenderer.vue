@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import type { Field } from '~/types/form-builder';
-import { resolveComponentMap } from '../builder/ui-helper';
-
+import type { Field } from "~/types/form-builder";
+import { resolveComponentMap } from "../builder/ui-helper";
 
 interface Props {
   field: Field;

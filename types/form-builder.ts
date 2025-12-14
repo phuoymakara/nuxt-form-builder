@@ -26,4 +26,12 @@ export interface FieldWithConditions extends Field {
   clearOnChange?: boolean; // Whether to clear this field when dependencies change (default: true)
   colSpan?: number; // Number of columns to span (1-12)
   row?: number; // Group fields by row number
+  cascadeConfig?: {
+    // Fields that should clear when this field changes
+    clearFieldsOnChange?: string[];
+    // Fields that depend on this field
+    dependentFields?: string[];
+    // Transform function for the selected value before API call
+    transformValue?: (val: any) => string | number;
+  };
 }

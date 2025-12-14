@@ -19,9 +19,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { parseDate, getLocalTimeZone, type CalendarDate } from '@internationalized/date';
-import type { Field } from '~/types/form-builder';
+import { computed } from "vue";
+import {
+  parseDate,
+  getLocalTimeZone,
+  type CalendarDate,
+} from "@internationalized/date";
+import type { Field } from "~/types/form-builder";
 
 interface Props {
   field: Field;
@@ -31,21 +35,21 @@ interface Props {
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
+  "update:modelValue": [value: string];
 }>();
 
 const displayDate = computed(() => {
-  return props.modelValue ? String(props.modelValue) : 'Select date...';
+  return props.modelValue ? String(props.modelValue) : "Select date...";
 });
 
 const calendarValue = computed(() => {
   if (!props.modelValue) return null;
-  
+
   // If already a CalendarDate, return as is
-  if (props.modelValue instanceof Object && 'toString' in props.modelValue) {
+  if (props.modelValue instanceof Object && "toString" in props.modelValue) {
     return props.modelValue as CalendarDate;
   }
-  
+
   // Convert string (YYYY-MM-DD) to CalendarDate
   try {
     return parseDate(String(props.modelValue));
@@ -56,16 +60,16 @@ const calendarValue = computed(() => {
 
 const handleDateChange = (val: any) => {
   if (!val) {
-    emit('update:modelValue', '');
+    emit("update:modelValue", "");
     return;
   }
 
   // Handle CalendarDate, Date, or DateRange
   let dateValue: CalendarDate;
-  
+
   if (val instanceof Date) {
     // Convert JS Date to CalendarDate
-    dateValue = parseDate(val.toISOString().split('T')[0]);
+    dateValue = parseDate(val.toISOString().split("T")[0]);
   } else if (Array.isArray(val)) {
     // Handle DateRange (array) - use first date
     dateValue = val[0];
@@ -75,7 +79,7 @@ const handleDateChange = (val: any) => {
   }
 
   // Convert to YYYY-MM-DD string
-  const formatted = dateValue.toString()
-  emit('update:modelValue', formatted);
+  const formatted = dateValue.toString();
+  emit("update:modelValue", formatted);
 };
 </script>

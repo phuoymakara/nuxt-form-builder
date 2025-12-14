@@ -1,9 +1,14 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-6">
     <!-- Group fields by row -->
-    <div v-for="rowNumber in uniqueRows" :key="rowNumber" class="grid gap-6" :class="getGridClass(rowNumber,fieldsByRow(rowNumber).length)">
+    <div
+      v-for="rowNumber in uniqueRows"
+      :key="rowNumber"
+      class="grid gap-6"
+      :class="getGridClass(rowNumber, fieldsByRow(rowNumber).length)"
+    >
       <div
-        v-for="(field,index) in fieldsByRow(rowNumber)"
+        v-for="(field, index) in fieldsByRow(rowNumber)"
         :key="field.name"
         :class="getColumnClass(field)"
       >
@@ -61,7 +66,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { ZodError, type ZodTypeAny } from "zod";
-import type { Field, FieldWithConditions, ObjectGeneric } from "~/types/form-builder";
+import type {
+  Field,
+  FieldWithConditions,
+  ObjectGeneric,
+} from "~/types/form-builder";
 import { resolveComponentMap } from "./ui-helper";
 import { getColumnClass, getGridClass } from "./style-helper";
 
@@ -70,12 +79,7 @@ const props = defineProps<{
   fields: FieldWithConditions[];
 }>();
 
-const emit = defineEmits([
-  "update:modelValue",
-  "validate",
-  "submit",
-  "error"
-]);
+const emit = defineEmits(["update:modelValue", "validate", "submit", "error"]);
 
 // -------------------------------------------------------------------
 // Internal State
@@ -92,7 +96,7 @@ props.fields.forEach((f) => {
     defaultValue = props.modelValue[f.name];
   }
   // Then check for function-based defaultValue
-  else if (f.defaultValue && typeof f.defaultValue === 'function') {
+  else if (f.defaultValue && typeof f.defaultValue === "function") {
     defaultValue = f.defaultValue(values.value);
   }
   // Then check for static defaultValue
@@ -116,15 +120,19 @@ props.fields.forEach((f) => {
 });
 
 // Sync back to parent (v-model)
-watch(values, (v) => {
-  emit("update:modelValue", { ...v });
-}, { deep: true });
+watch(
+  values,
+  (v) => {
+    emit("update:modelValue", { ...v });
+  },
+  { deep: true },
+);
 
 // -------------------------------------------------------------------
 // Computed: Visible Fields
 // -------------------------------------------------------------------
 const visibleFields = computed(() => {
-  return props.fields.filter(field => {
+  return props.fields.filter((field) => {
     if (!field.hidden) return true;
     return !field.hidden(values.value);
   });
@@ -135,7 +143,7 @@ const visibleFields = computed(() => {
 // -------------------------------------------------------------------
 const uniqueRows = computed(() => {
   const rows = new Set<number>();
-  visibleFields.value.forEach(field => {
+  visibleFields.value.forEach((field) => {
     const rowNum = field.row ?? 0;
     rows.add(rowNum);
   });
@@ -146,7 +154,7 @@ const uniqueRows = computed(() => {
 // Get fields by row number
 // -------------------------------------------------------------------
 const fieldsByRow = (rowNumber: number) => {
-  return visibleFields.value.filter(field => (field.row ?? 0) === rowNumber);
+  return visibleFields.value.filter((field) => (field.row ?? 0) === rowNumber);
 };
 
 // -------------------------------------------------------------------
@@ -162,7 +170,7 @@ const isFieldDisabled = (field: FieldWithConditions): boolean => {
 // -------------------------------------------------------------------
 const getFieldOptions = (field: FieldWithConditions) => {
   // If field has dynamic options function
-  if (field.options && typeof field.options === 'function') {
+  if (field.options && typeof field.options === "function") {
     return field.options(values.value);
   }
   // Otherwise use static options
@@ -192,7 +200,11 @@ const validateField = (name: string, value: any, validator?: ZodTypeAny) => {
 // -------------------------------------------------------------------
 // Update Field Handler
 // -------------------------------------------------------------------
-const onFieldChange = (value: any, field: FieldWithConditions, index: number) => {
+const onFieldChange = (
+  value: any,
+  field: FieldWithConditions,
+  index: number,
+) => {
   // If checkbox group → ensure array
   if (field.component === "UCheckboxGroup") {
     if (!Array.isArray(value)) {
@@ -228,7 +240,7 @@ const clearDependentFields = (changedFieldName: string) => {
     if (field.dependsOn?.includes(changedFieldName)) {
       // Default behavior is to clear (clearOnChange defaults to true)
       const shouldClear = field.clearOnChange !== false;
-      
+
       if (shouldClear) {
         if (field.component === "UCheckboxGroup") {
           values.value[field.name] = [];
@@ -247,10 +259,13 @@ const clearDependentFields = (changedFieldName: string) => {
 // -------------------------------------------------------------------
 const applyDependentDefaults = () => {
   props.fields.forEach((field: FieldWithConditions) => {
-    if (field.defaultValue && typeof field.defaultValue === 'function') {
+    if (field.defaultValue && typeof field.defaultValue === "function") {
       const newDefault = field.defaultValue(values.value);
       // Only update if field was hidden and is now visible, or value is empty
-      if (newDefault !== undefined && (values.value[field.name] === "" || values.value[field.name] === null)) {
+      if (
+        newDefault !== undefined &&
+        (values.value[field.name] === "" || values.value[field.name] === null)
+      ) {
         values.value[field.name] = newDefault;
       }
     }
@@ -267,7 +282,7 @@ const validateAll = () => {
     const { valid, message } = validateField(
       field.name,
       values.value[field.name],
-      field.validation
+      field.validation,
     );
     if (!valid) allValid = false;
     errors.value[field.name] = valid ? undefined : message;
@@ -304,7 +319,7 @@ defineExpose({
   submit: handleSubmit,
   values,
   errors,
-  isValid
+  isValid,
 });
 </script>
 

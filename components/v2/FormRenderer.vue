@@ -17,17 +17,18 @@ const emit = defineEmits<{
 }>();
 
 const allFields = computed(() => {
-  return props.items.flatMap(item =>
-    isRow(item) ? item.fields : [item],
-  );
+  return props.items.flatMap((item) => (isRow(item) ? item.fields : [item]));
 });
 
 const state = reactive<Data>(
-  allFields.value.reduce((acc, field) => {
-    const initialValues = props.initialValues ?? ({} as Data);
-    acc[field.name] = initialValues[field.name] ?? "";
-    return acc;
-  }, {} as Record<string, any>) as Data,
+  allFields.value.reduce(
+    (acc, field) => {
+      const initialValues = props.initialValues ?? ({} as Data);
+      acc[field.name] = initialValues[field.name] ?? "";
+      return acc;
+    },
+    {} as Record<string, any>,
+  ) as Data,
 );
 
 const schema = computed(() => {
@@ -54,12 +55,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <UForm
-    :schema="schema"
-    :state="state"
-    class="space-y-4"
-    @submit="onSubmit"
-  >
+  <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
     <template v-for="(item, index) in items" :key="index">
       <div
         v-if="isRow(item)"
@@ -74,17 +70,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         />
       </div>
 
-      <V2FieldRenderer
-        v-else
-        v-model="state[item.name]"
-        :field="item"
-      />
+      <V2FieldRenderer v-else v-model="state[item.name]" :field="item" />
     </template>
 
     <slot name="actions" :state="state">
-      <UButton type="submit">
-        Submit
-      </UButton>
+      <UButton type="submit"> Submit </UButton>
     </slot>
   </UForm>
 </template>

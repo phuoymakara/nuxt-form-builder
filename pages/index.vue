@@ -3,7 +3,9 @@
     <h1>Multi-Section Form Builder</h1>
 
     <ULink to="/wizard-form" class="cursor-pointer">
-      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer">ចូល Wizard Form</UButton>
+      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer"
+        >ចូល Wizard Form</UButton
+      >
     </ULink>
 
     <!-- Section 1: Basic Info -->
@@ -49,13 +51,17 @@
     </div>
 
     <!-- Form State Display -->
-    <pre class="mt-6 p-4 bg-gray-100 rounded">{{ JSON.stringify(form, null, 2) }}</pre>
-    
+    <pre class="mt-6 p-4 bg-gray-100 rounded">{{
+      JSON.stringify(form, null, 2)
+    }}</pre>
+
     <!-- Validation Errors Display -->
     <div v-if="allErrors.length" class="mt-4 p-4 bg-red-100 rounded">
       <h3 class="font-bold mb-2">Errors:</h3>
       <ul>
-        <li v-for="error in allErrors" :key="error" class="text-red-600">{{ error }}</li>
+        <li v-for="error in allErrors" :key="error" class="text-red-600">
+          {{ error }}
+        </li>
       </ul>
     </div>
   </div>
@@ -68,14 +74,14 @@ import { CalendarDate } from "@internationalized/date";
 import type { Field } from "~/types/form-builder";
 
 definePageMeta({
-  title: 'ESB Form Builder',
-  description: 'ESB',
-  image: '/og.png',
-  author: 'Makara',
-  keywords: 'ESB, Form',
-  ogType: 'website',
-  name: 'esb-maff', 
-})
+  title: "ESB Form Builder",
+  description: "ESB",
+  image: "/og.png",
+  author: "Makara",
+  keywords: "ESB, Form",
+  ogType: "website",
+  name: "esb-maff",
+});
 
 // ============ SCHEMAS ============
 const basicInfoSchema = z.object({
@@ -88,10 +94,9 @@ const basicInfoSchema = z.object({
 enum BUSINESS_TYPE {
   COMPANY = "COMAPNY",
   NGO = "NGO",
-  GOVERMENT = "GOVERMENT"
+  GOVERMENT = "GOVERMENT",
 }
 const jobInfoSchema = z.object({
-
   job_type: z.array(z.string()).min(1, "Select at least one job type"),
   company_name: z.string().min(1, "Company name required"),
   position: z.string().min(1, "Position required"),
@@ -109,7 +114,7 @@ const basicInfoFields: Field[] = [
     component: "UInput",
     type: "email",
     validation: basicInfoSchema.shape["email"],
-    props: { placeholder: "Enter email" }
+    props: { placeholder: "Enter email" },
   },
   {
     name: "age",
@@ -117,7 +122,7 @@ const basicInfoFields: Field[] = [
     component: "UInput",
     type: "number",
     validation: basicInfoSchema.shape["age"],
-    props: { placeholder: "Age" }
+    props: { placeholder: "Age" },
   },
   {
     name: "gender",
@@ -128,9 +133,9 @@ const basicInfoFields: Field[] = [
     props: {
       options: [
         { label: "Male", value: "M" },
-        { label: "Female", value: "F" }
-      ]
-    }
+        { label: "Female", value: "F" },
+      ],
+    },
   },
   {
     name: "birth_date",
@@ -138,7 +143,7 @@ const basicInfoFields: Field[] = [
     type: "text",
     component: "UCalendar",
     validation: basicInfoSchema.shape["birth_date"],
-    props: {}
+    props: {},
   },
 ];
 
@@ -153,9 +158,9 @@ const jobInfoFields: Field[] = [
       items: [
         { label: "ការងាររដ្ឋ", value: "government" },
         { label: "ការងារឯកជន", value: "private" },
-        { label: "អាជីវកម្មផ្ទាល់ខ្លួន", value: "self" }
-      ]
-    }
+        { label: "អាជីវកម្មផ្ទាល់ខ្លួន", value: "self" },
+      ],
+    },
   },
   {
     name: "company_name",
@@ -163,7 +168,7 @@ const jobInfoFields: Field[] = [
     type: "",
     component: "UInput",
     validation: jobInfoSchema.shape["company_name"],
-    props: { placeholder: "Enter company name" }
+    props: { placeholder: "Enter company name" },
   },
   {
     name: "position",
@@ -171,15 +176,15 @@ const jobInfoFields: Field[] = [
     component: "UInput",
     type: "",
     validation: jobInfoSchema.shape["position"],
-    props: { placeholder: "Enter position" }
+    props: { placeholder: "Enter position" },
   },
-    {
+  {
     name: "salary",
     label: "Salary",
     component: "UInput",
     type: "number",
     validation: jobInfoSchema.shape["salary"],
-    props: { placeholder: "Salary (optional)" }
+    props: { placeholder: "Salary (optional)" },
   },
   // {
   //   name: "business_type",
@@ -187,7 +192,7 @@ const jobInfoFields: Field[] = [
   //   component: "URadioGroup",
   //   type: "radio",
   //   validation: jobInfoSchema.shape["business_type"],
-  //   props: { 
+  //   props: {
   //     placeholder: "Business",
   //     items: [
   //       { label: "Goverment", value: BUSINESS_TYPE.GOVERMENT },
@@ -200,7 +205,7 @@ const jobInfoFields: Field[] = [
 // ============ STATE ============
 const form = reactive({
   basicInfo: {},
-  jobInfo: {}
+  jobInfo: {},
 });
 
 const allErrors = ref<string[]>([]);
@@ -249,10 +254,10 @@ function submitSection(section: "basicInfo" | "jobInfo") {
 function validateAllSections() {
   const basicInfoValid = basicInfoFormRef.value?.validateAll();
   const jobInfoValid = jobInfoFormRef.value?.validateAll();
-  
+
   console.log("BASIC INFO VALID:", basicInfoValid);
   console.log("JOB INFO VALID:", jobInfoValid);
-  
+
   if (basicInfoValid && jobInfoValid) {
     alert("All sections are valid!");
   } else {
@@ -264,11 +269,11 @@ function submitAllSections() {
   allErrors.value = [];
   const basicInfoValid = basicInfoFormRef.value?.validateAll();
   const jobInfoValid = jobInfoFormRef.value?.validateAll();
-  
+
   if (basicInfoValid && jobInfoValid) {
     console.log("ALL SECTIONS SUBMITTED", {
       basicInfo: form.basicInfo,
-      jobInfo: form.jobInfo
+      jobInfo: form.jobInfo,
     });
     alert("All sections submitted successfully!");
   } else {

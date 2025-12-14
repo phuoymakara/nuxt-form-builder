@@ -161,7 +161,7 @@ export const addressFieldsConfig = [
     type: "text",
     row: 6,
     colSpan: 12,
-    validation: z.string().min(5, "សូមបញ្ចូលលម្អិត").optional(),
+    validation: z.string().min(3, "សូមបញ្ចូលលម្អិត").optional(),
     props: {
       placeholder: "បញ្ចូលលម្អិត ឧ: ផ្ទះលេខ ៥៣, ផ្លូវលេខ ៩៣...",
     },
@@ -400,7 +400,7 @@ export const jobApplicationFormConfig: FormConfig = {
             },
             {
               name: "salary",
-              label: "ប្រាក់ខែ",
+              label: "ប្រាក់ខែ/ចំណូល",
               component: "UInput",
               type: "number",
               row: 3,

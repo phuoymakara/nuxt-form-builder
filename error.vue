@@ -37,6 +37,20 @@ useSeoMeta({
     <div
       class="relative z-10 w-full max-w-2xl bg-gray-800/80 p-8 md:p-12 rounded-xl shadow-2xl border border-gray-700/50 text-center text-white backdrop-filter backdrop-blur-lg"
     >
+      <!-- Floating Center Button -->
+      <div class="absolute left-1/2 -top-20 transform -translate-x-1/2">
+        <ULink
+          to="/wizard-form"
+          class="text-white hover:text-white cursor-pointer"
+        >
+          <UButton
+            class="cursor-pointer px-6 py-3 bg-amber-500 text-white font-semibold rounded-full shadow-lg shadow-amber-500/30 hover:bg-amber-400 hover:shadow-xl hover:shadow-amber-400/40 transition-all duration-300"
+          >
+            Playground
+          </UButton>
+        </ULink>
+      </div>
+
       <div class="mb-6">
         <span
           class="text-6xl mb-4 block animate-bounce"

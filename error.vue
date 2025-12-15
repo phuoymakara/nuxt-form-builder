@@ -38,7 +38,7 @@ useSeoMeta({
       class="relative z-10 w-full max-w-2xl bg-gray-800/80 p-8 md:p-12 rounded-xl shadow-2xl border border-gray-700/50 text-center text-white backdrop-filter backdrop-blur-lg"
     >
       <!-- Floating Center Button -->
-      <div class="absolute left-1/2 -top-20 transform -translate-x-1/2">
+      <div class="absolute left-1/2 -top-8 transform -translate-x-1/2">
         <ULink
           to="/wizard-form"
           class="text-white hover:text-white cursor-pointer"

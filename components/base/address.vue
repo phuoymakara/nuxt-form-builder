@@ -190,12 +190,27 @@ function handleChangeEvent(event: Event) {
   emit("change", { event, value: rawObject });
 }
 
+// emit dependency:changed when this field's own value changes (V1 refetch chain)
 watch(
   () => props.modelValue,
   () => {
     cachedData.value = {};
     emit("dependency:changed", props.field.name);
   },
+);
+
+// re-fetch when any parent dependency value changes in formValues (V2 support)
+watch(
+  () => props.field.dependsOn?.map((dep) => props.formValues?.[dep]),
+  (newVals, oldVals) => {
+    if (JSON.stringify(newVals) === JSON.stringify(oldVals)) return;
+    options.value = [];
+    cachedData.value = {};
+    if (!isDisabled.value) {
+      setTimeout(() => fetchOptions(true), 50);
+    }
+  },
+  { deep: true },
 );
 
 onMounted(() => {

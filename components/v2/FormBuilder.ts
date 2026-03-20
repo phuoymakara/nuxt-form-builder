@@ -1,43 +1,76 @@
-import type { Field } from "~/types/form-builder";
+import { defineComponent, h } from "vue";
+import type { PropType } from "vue";
+import type { FieldWithConditions } from "~/types/form-builder";
 import FormRenderer from "./FormRenderer.vue";
-import type { FieldOrRow } from "~/components/v2/types";
 
 export default class FormBuilder {
-  private items: FieldOrRow[] = [];
+  private fields: FieldWithConditions[] = [];
+  private rowCounter = 0;
 
-  addField(field: Field): this {
-    this.items.push(field);
+  // single full-width field, auto-increments row
+  addField(
+    field: Omit<FieldWithConditions, "row" | "colSpan"> & {
+      row?: number;
+      colSpan?: number;
+    },
+  ): this {
+    this.rowCounter++;
+    this.fields.push({
+      ...field,
+      row: field.row ?? this.rowCounter,
+      colSpan: field.colSpan ?? 12,
+    } as FieldWithConditions);
     return this;
   }
 
-  addRow(fields: Field[]): this {
-    this.items.push({
-      type: "row",
-      fields,
+  // multiple fields on same row, last field absorbs remainder to sum 12
+  addRow(
+    fields: Array<
+      Omit<FieldWithConditions, "row" | "colSpan"> & { colSpan?: number }
+    >,
+  ): this {
+    this.rowCounter++;
+    const defaultSpan = Math.floor(12 / fields.length);
+
+    fields.forEach((field, i) => {
+      const isLast = i === fields.length - 1;
+      const colSpan =
+        field.colSpan ??
+        (isLast ? 12 - defaultSpan * (fields.length - 1) : defaultSpan);
+
+      this.fields.push({
+        ...field,
+        row: this.rowCounter,
+        colSpan,
+      } as FieldWithConditions);
     });
+
     return this;
   }
 
+  // returns a Vue component ready to use in template
   build() {
-    const items = this.items;
+    const fields = [...this.fields];
 
     return defineComponent({
       name: "DynamicForm",
       props: {
         initialValues: {
-          type: Object,
+          type: Object as PropType<Record<string, any>>,
           default: () => ({}),
         },
       },
-      emits: ["submit"],
+      emits: ["submit", "change"],
       setup(props, { emit, slots }) {
         return () =>
           h(
             FormRenderer,
             {
-              items,
+              fields,
               initialValues: props.initialValues,
               onSubmit: (data: any) => emit("submit", data),
+              onChange: (field: string, value: any) =>
+                emit("change", field, value),
             },
             slots,
           );

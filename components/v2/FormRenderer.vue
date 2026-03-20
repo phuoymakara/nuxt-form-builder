@@ -1,80 +1,101 @@
 <script setup lang="ts" generic="Data extends Record<string, any>">
+import { ref, computed } from "vue";
 import type { FormSubmitEvent } from "@nuxt/ui";
 import { z } from "zod";
-import FieldRenderer from "./FieldRenderer.vue";
-import type { Field } from "~/types/form-builder";
-import type { FieldOrRow } from "~/components/v2/types";
+import type { FieldWithConditions } from "~/types/form-builder";
+import { useFormState } from "~/composables/useFormState";
 
 interface Props {
-  items: FieldOrRow[];
+  fields: FieldWithConditions[];
   initialValues?: Data;
+  hideActions?: boolean; // set true inside WizardRenderer to suppress submit button
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [data: Data];
+  change: [field: string, value: any];
 }>();
 
-const allFields = computed(() => {
-  return props.items.flatMap((item) => (isRow(item) ? item.fields : [item]));
-});
+const { values, errors, visibleFields, rowGroups, setValue, isDisabled, getOptions, validate } =
+  useFormState(props.fields, props.initialValues);
 
-const state = reactive<Data>(
-  allFields.value.reduce(
-    (acc, field) => {
-      const initialValues = props.initialValues ?? ({} as Data);
-      acc[field.name] = initialValues[field.name] ?? "";
-      return acc;
-    },
-    {} as Record<string, any>,
-  ) as Data,
-);
-
+// schema rebuilds when visible fields change (hidden fields are excluded)
 const schema = computed(() => {
   const shape: Record<string, any> = {};
-
-  allFields.value.forEach((field) => {
-    if (field.validation) {
-      shape[field.name] = field.validation;
-    }
-  });
-
+  for (const field of visibleFields.value) {
+    if (field.validation) shape[field.name] = field.validation;
+  }
   return z.object(shape);
 });
 
-type Schema = z.infer<(typeof schema)["value"]>;
-
-function isRow(item: FieldOrRow): item is { type: "row"; fields: Field[] } {
-  return "type" in item && item.type === "row";
+// col-span class: full width on mobile, colSpan on sm+
+function colSpanClass(field: FieldWithConditions): string {
+  return `col-span-12 sm:col-span-${field.colSpan ?? 12}`;
 }
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+function handleFieldChange(field: FieldWithConditions, newValue: any) {
+  setValue(field.name, newValue);
+  emit("change", field.name, newValue);
+}
+
+async function onSubmit(event: FormSubmitEvent<any>) {
   emit("submit", event.data as Data);
 }
+
+const formRef = ref<any>(null);
+
+async function validateForm(): Promise<boolean> {
+  if (!formRef.value) return validate();
+  try {
+    await formRef.value.validate(); // resolves = valid, throws = invalid
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+defineExpose({ values, errors, validate: validateForm });
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-    <template v-for="(item, index) in items" :key="index">
+  <UForm
+    ref="formRef"
+    :schema="schema"
+    :state="values"
+    class="space-y-4"
+    @submit="onSubmit"
+  >
+    <!-- fields grouped by row, each row is a 12-col grid -->
+    <div
+      v-for="(rowFields, rowIndex) in rowGroups"
+      :key="rowIndex"
+      class="grid grid-cols-12 gap-4"
+    >
       <div
-        v-if="isRow(item)"
-        class="grid grid-cols-[repeat(var(--cols),1fr)] gap-4"
-        :style="{ '--cols': item.fields.length }"
+        v-for="field in rowFields"
+        :key="field.name"
+        :class="colSpanClass(field)"
       >
-        <FieldRenderer
-          v-for="field in item.fields"
-          :key="field.name"
-          v-model="state[field.name]"
+        <V2FieldRenderer
           :field="field"
+          :model-value="values[field.name]"
+          :form-values="values"
+          :options="getOptions(field)"
+          :disabled="isDisabled(field)"
+          @update:model-value="handleFieldChange(field, $event)"
         />
       </div>
+    </div>
 
-      <V2FieldRenderer v-else v-model="state[item.name]" :field="item" />
+    <!-- actions slot — hidden when hideActions is true -->
+    <template v-if="!hideActions">
+      <slot name="actions" :state="values" :validate="validateForm">
+        <div class="flex justify-end">
+          <UButton type="submit">Submit</UButton>
+        </div>
+      </slot>
     </template>
-
-    <slot name="actions" :state="state">
-      <UButton type="submit"> Submit </UButton>
-    </slot>
   </UForm>
 </template>

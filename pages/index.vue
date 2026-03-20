@@ -1,283 +1,175 @@
-<template>
-  <div class="w-3/5 mx-auto grid grid-cols-1 gap-6 p-10">
-    <h1>Multi-Section Form Builder</h1>
-
-    <ULink to="/wizard-form" class="cursor-pointer">
-      <UButton color="primary" class="p-3 rounded-2xl cursor-pointer"
-        >ចូល Wizard Form</UButton
-      >
-    </ULink>
-
-    <!-- Section 1: Basic Info -->
-    <UCard>
-      <h2>១. ព័ត៌មាននៃមនុស្ស</h2>
-      <BuilderFormFactory
-        ref="basicInfoFormRef"
-        v-model="form.basicInfo"
-        :fields="basicInfoFields"
-        @submit="onBasicInfoSubmit"
-        @error="onBasicInfoError"
-        @validate="onValidate"
-      />
-    </UCard>
-
-    <!-- Section 2: Job Info -->
-    <UCard>
-      <h2>២. ព័ត៌មានលម្អិតលម្អិត</h2>
-      <BuilderFormFactory
-        ref="jobInfoFormRef"
-        v-model="form.jobInfo"
-        :fields="jobInfoFields"
-        @submit="onJobInfoSubmit"
-        @error="onJobInfoError"
-        @validate="onValidate"
-      />
-    </UCard>
-
-    <!-- Action UButtons -->
-    <div class="mt-8 flex gap-4">
-      <UButton class="btn btn-primary" @click="submitSection('basicInfo')">
-        Submit Basic Info
-      </UButton>
-      <UButton class="btn btn-primary" @click="submitSection('jobInfo')">
-        Submit Job Info
-      </UButton>
-      <UButton class="btn btn-success" @click="submitAllSections">
-        Submit All Sections
-      </UButton>
-      <UButton class="btn btn-secondary" @click="validateAllSections">
-        Validate All
-      </UButton>
-    </div>
-
-    <!-- Form State Display -->
-    <pre class="mt-6 p-4 bg-gray-100 rounded">{{
-      JSON.stringify(form, null, 2)
-    }}</pre>
-
-    <!-- Validation Errors Display -->
-    <div v-if="allErrors.length" class="mt-4 p-4 bg-red-100 rounded">
-      <h3 class="font-bold mb-2">Errors:</h3>
-      <ul>
-        <li v-for="error in allErrors" :key="error" class="text-red-600">
-          {{ error }}
-        </li>
-      </ul>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, reactive } from "vue";
-import { z } from "zod";
-import { CalendarDate } from "@internationalized/date";
-import type { Field } from "~/types/form-builder";
-
 definePageMeta({
   title: "ESB Form Builder",
-  description: "ESB",
-  image: "/og.png",
-  author: "Makara",
-  keywords: "ESB, Form",
-  ogType: "website",
-  name: "esb-maff",
 });
 
-// ============ SCHEMAS ============
-const basicInfoSchema = z.object({
-  email: z.string().email("Invalid email"),
-  age: z.coerce.number().min(18, "Must be at least 18"),
-  gender: z.string().min(1, "Select gender"),
-  birth_date: z.string().min(1, "Select date"),
-});
-
-enum BUSINESS_TYPE {
-  COMPANY = "COMAPNY",
-  NGO = "NGO",
-  GOVERMENT = "GOVERMENT",
-}
-const jobInfoSchema = z.object({
-  job_type: z.array(z.string()).min(1, "Select at least one job type"),
-  company_name: z.string().min(1, "Company name required"),
-  position: z.string().min(1, "Position required"),
-  salary: z.coerce.number().optional(),
-});
-
-type BasicInfoType = z.infer<typeof basicInfoSchema>;
-type JobInfoType = z.infer<typeof jobInfoSchema>;
-
-// ============ FIELDS ============
-const basicInfoFields: Field[] = [
-  {
-    name: "email",
-    label: "Email",
-    component: "UInput",
-    type: "email",
-    validation: basicInfoSchema.shape["email"],
-    props: { placeholder: "Enter email" },
-  },
-  {
-    name: "age",
-    label: "Age",
-    component: "UInput",
-    type: "number",
-    validation: basicInfoSchema.shape["age"],
-    props: { placeholder: "Age" },
-  },
-  {
-    name: "gender",
-    label: "Gender",
-    component: "USelect",
-    type: "text",
-    validation: basicInfoSchema.shape["gender"],
-    props: {
-      options: [
-        { label: "Male", value: "M" },
-        { label: "Female", value: "F" },
-      ],
-    },
-  },
-  {
-    name: "birth_date",
-    label: "Birth Date",
-    type: "text",
-    component: "UCalendar",
-    validation: basicInfoSchema.shape["birth_date"],
-    props: {},
-  },
-];
-
-const jobInfoFields: Field[] = [
-  {
-    name: "job_type",
-    label: "ប្រភេទការងារ",
-    component: "UCheckboxGroup",
-    validation: jobInfoSchema.shape["job_type"],
-    type: "",
-    props: {
-      items: [
-        { label: "ការងាររដ្ឋ", value: "government" },
-        { label: "ការងារឯកជន", value: "private" },
-        { label: "អាជីវកម្មផ្ទាល់ខ្លួន", value: "self" },
-      ],
-    },
-  },
-  {
-    name: "company_name",
-    label: "Company Name",
-    type: "",
-    component: "UInput",
-    validation: jobInfoSchema.shape["company_name"],
-    props: { placeholder: "Enter company name" },
-  },
-  {
-    name: "position",
-    label: "Position",
-    component: "UInput",
-    type: "",
-    validation: jobInfoSchema.shape["position"],
-    props: { placeholder: "Enter position" },
-  },
-  {
-    name: "salary",
-    label: "Salary",
-    component: "UInput",
-    type: "number",
-    validation: jobInfoSchema.shape["salary"],
-    props: { placeholder: "Salary (optional)" },
-  },
+const cards = [
   // {
-  //   name: "business_type",
-  //   label: "business type",
-  //   component: "URadioGroup",
-  //   type: "radio",
-  //   validation: jobInfoSchema.shape["business_type"],
-  //   props: {
-  //     placeholder: "Business",
-  //     items: [
-  //       { label: "Goverment", value: BUSINESS_TYPE.GOVERMENT },
-  //       { label: "NGO", value: BUSINESS_TYPE.NGO },
-  //     ]
-  //    }
+  //   label: "V1",
+  //   badge: "neutral",
+  //   icon: "i-heroicons-document-text",
+  //   title: "Basic Form",
+  //   description:
+  //     "Original multi-section form with UCalendar, UCheckboxGroup, and manual validation.",
+  //   to: "/basic-form",
+  //   action: "Open",
+  //   features: ["UCalendar", "UCheckboxGroup", "Manual Zod validation"],
   // },
+  // {
+  //   label: "V1",
+  //   badge: "neutral",
+  //   icon: "i-heroicons-clipboard-document-list",
+  //   title: "V1 Wizard Form",
+  //   description:
+  //     "Multi-step wizard with address cascade, file upload, and per-section validation.",
+  //   to: "/wizard-form",
+  //   action: "Open",
+  //   features: ["Multi-step", "Cascade address", "File upload"],
+  // },
+  // {
+  //   label: "V2",
+  //   badge: "primary",
+  //   icon: "i-heroicons-bolt",
+  //   title: "V2 Dynamic Form",
+  //   description:
+  //     "FormBuilder API — fluent, type-safe field definitions with conditional logic and grid layout.",
+  //   to: "/v2",
+  //   action: "Open",
+  //   features: ["Conditional fields", "12-col grid", "Zod validation"],
+  //   highlight: true,
+  // },
+  {
+    label: "V2",
+    badge: "primary",
+    icon: "i-heroicons-squares-2x2",
+    title: "DEMO: Wizard Form",
+    description:
+      "Multi-page wizard using the V2 FormBuilder and composable-driven state management.",
+    to: "/v2/wizard",
+    action: "Open",
+    features: ["Multi-page wizard", "Cascading selects", "useFormState"],
+    highlight: true,
+  },
+  {
+    label: "API",
+    badge: "success",
+    icon: "i-heroicons-server",
+    title: "My  Dynamic Forms",
+    description:
+      "Forms loaded from server JSON configs. No code changes needed — add new forms via API.",
+    to: "/dynamic",
+    action: "Browse",
+    features: ["JSON config", "interpretConfig()", "Server API"],
+    highlight: true,
+  },
+  {
+    label: "Builder",
+    badge: "warning",
+    icon: "i-heroicons-cursor-arrow-rays",
+    title: "Form Builder",
+    description:
+      "Drag-and-drop visual builder to create forms and save them to localStorage or export JSON.",
+    to: "/builder",
+    action: "Build",
+    features: ["Drag & drop", "Live preview", "Export JSON"],
+    highlight: true,
+  },
 ];
-
-// ============ STATE ============
-const form = reactive({
-  basicInfo: {},
-  jobInfo: {},
-});
-
-const allErrors = ref<string[]>([]);
-
-// ============ REFS ============
-const basicInfoFormRef = ref<any>(null);
-const jobInfoFormRef = ref<any>(null);
-
-// ============ HANDLERS ============
-function onBasicInfoSubmit(values: BasicInfoType) {
-  console.log("BASIC INFO SUBMITTED", values);
-  allErrors.value = [];
-  alert("Basic Info submitted successfully!");
-}
-
-function onBasicInfoError(err: any) {
-  console.log("BASIC INFO ERROR", err);
-  allErrors.value = Array.isArray(err) ? err : [err];
-}
-
-function onJobInfoSubmit(values: JobInfoType) {
-  console.log("JOB INFO SUBMITTED", values);
-  allErrors.value = [];
-  alert("Job Info submitted successfully!");
-}
-
-function onJobInfoError(err: any) {
-  console.log("JOB INFO ERROR", err);
-  allErrors.value = Array.isArray(err) ? err : [err];
-}
-
-function onValidate(e: any) {
-  console.log("FIELD VALIDATED", e);
-}
-
-// ============ ACTIONS ============
-function submitSection(section: "basicInfo" | "jobInfo") {
-  allErrors.value = [];
-  if (section === "basicInfo") {
-    basicInfoFormRef.value?.submit();
-  } else {
-    jobInfoFormRef.value?.submit();
-  }
-}
-
-function validateAllSections() {
-  const basicInfoValid = basicInfoFormRef.value?.validateAll();
-  const jobInfoValid = jobInfoFormRef.value?.validateAll();
-
-  console.log("BASIC INFO VALID:", basicInfoValid);
-  console.log("JOB INFO VALID:", jobInfoValid);
-
-  if (basicInfoValid && jobInfoValid) {
-    alert("All sections are valid!");
-  } else {
-    allErrors.value = ["Please fix errors in the form"];
-  }
-}
-
-function submitAllSections() {
-  allErrors.value = [];
-  const basicInfoValid = basicInfoFormRef.value?.validateAll();
-  const jobInfoValid = jobInfoFormRef.value?.validateAll();
-
-  if (basicInfoValid && jobInfoValid) {
-    console.log("ALL SECTIONS SUBMITTED", {
-      basicInfo: form.basicInfo,
-      jobInfo: form.jobInfo,
-    });
-    alert("All sections submitted successfully!");
-  } else {
-    allErrors.value = ["Please fix all validation errors before submitting"];
-  }
-}
 </script>
+
+<template>
+  <div class="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 py-16">
+    <UContainer>
+      <div class="max-w-5xl mx-auto">
+        <!-- Hero -->
+        <div class="text-center mb-14">
+          <div class="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-1.5 text-sm text-gray-600 shadow-xs mb-6">
+            <UIcon name="i-heroicons-sparkles" class="size-4 text-primary-500" />
+            Nuxt 3 · Nuxt UI v3 · Zod v4 · Vue 3.5
+          </div>
+          <h1 class="text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
+            ESB Form Builder
+          </h1>
+          <p class="text-lg text-gray-500 max-w-xl mx-auto">
+            A progressive dynamic form system — from simple field arrays to
+            API-driven configs, visual builder, and multi-step wizards.
+          </p>
+        </div>
+
+        <!-- Feature cards grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <NuxtLink
+            v-for="card in cards"
+            :key="card.to"
+            :to="card.to"
+            class="group block"
+          >
+            <UCard
+              class="h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+              :class="card.highlight ? 'ring-1 ring-primary-200' : ''"
+            >
+              <!-- Icon + badge row -->
+              <div class="flex items-start justify-between mb-4">
+                <div
+                  class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  :class="
+                    card.highlight
+                      ? 'bg-primary-50'
+                      : 'bg-gray-100'
+                  "
+                >
+                  <UIcon
+                    :name="card.icon"
+                    class="size-5"
+                    :class="card.highlight ? 'text-primary-600' : 'text-gray-500'"
+                  />
+                </div>
+                <UBadge
+                  :color="card.badge as any"
+                  variant="soft"
+                  size="sm"
+                >
+                  {{ card.label }}
+                </UBadge>
+              </div>
+
+              <!-- Content -->
+              <h2 class="text-base font-semibold text-gray-900 mb-1.5 group-hover:text-primary-600 transition-colors">
+                {{ card.title }}
+              </h2>
+              <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                {{ card.description }}
+              </p>
+
+              <!-- Features -->
+              <ul class="space-y-1 mb-5">
+                <li
+                  v-for="f in card.features"
+                  :key="f"
+                  class="flex items-center gap-1.5 text-xs text-gray-400"
+                >
+                  <UIcon
+                    name="i-heroicons-check"
+                    class="size-3.5 text-primary-400 shrink-0"
+                  />
+                  {{ f }}
+                </li>
+              </ul>
+
+              <!-- CTA -->
+              <div class="flex items-center gap-1 text-sm font-medium text-primary-600 group-hover:gap-2 transition-all">
+                {{ card.action }}
+                <UIcon name="i-heroicons-arrow-right" class="size-4" />
+              </div>
+            </UCard>
+          </NuxtLink>
+        </div>
+
+        <!-- Footer note -->
+        <p class="text-center text-xs text-gray-400 mt-12">
+          Built with Nuxt 3 · Nuxt UI v3 · TypeScript · Zod
+        </p>
+      </div>
+    </UContainer>
+  </div>
+</template>

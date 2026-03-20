@@ -2,6 +2,7 @@
   <UApp :toaster="{ position: 'top-right' }">
     <NuxtLoadingIndicator />
     <NuxtPage />
+    <AppConfirmModal />
   </UApp>
 </template>
 <script setup lang="ts">

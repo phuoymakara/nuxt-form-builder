@@ -1,6 +1,5 @@
 <script setup lang="ts" generic="Data extends Record<string, any>">
 import { ref, computed } from "vue";
-import type { FormSubmitEvent } from "@nuxt/ui";
 import { z } from "zod";
 import type { FieldWithConditions } from "~/types/form-builder";
 import { useFormState } from "~/composables/useFormState";
@@ -55,34 +54,36 @@ function handleFieldChange(field: FieldWithConditions, newValue: any) {
   emit("change", field.name, newValue);
 }
 
-async function onSubmit(event: FormSubmitEvent<any>) {
-  emit("submit", event.data as Data);
-}
-
 const formRef = ref<any>(null);
 
 async function validateForm(): Promise<boolean> {
   if (!formRef.value) return validate();
   try {
-    await formRef.value.validate(); // resolves = valid, throws = invalid
+    await formRef.value.validate();
     return true;
   } catch {
     return false;
   }
 }
 
+// Explicit submit — called by button click, not native form submit
+async function handleSubmit() {
+  const valid = await validateForm();
+  if (valid) emit("submit", values as Data);
+}
+
 defineExpose({ values, errors, validate: validateForm });
 </script>
 
 <template>
+  <!-- @submit.prevent blocks any accidental native submit (e.g. USelectMenu option buttons) -->
   <UForm
     ref="formRef"
     :schema="schema"
     :state="values"
     class="space-y-4"
-    @submit="onSubmit"
+    @submit.prevent
   >
-    <!-- single 12-col grid — CSS auto-flow packs col-span-* fields into rows -->
     <div class="grid grid-cols-12 gap-4">
       <div
         v-for="field in visibleFields"
@@ -100,11 +101,10 @@ defineExpose({ values, errors, validate: validateForm });
       </div>
     </div>
 
-    <!-- actions slot — hidden when hideActions is true -->
     <template v-if="!hideActions">
-      <slot name="actions" :state="values" :validate="validateForm">
+      <slot name="actions" :state="values" :validate="validateForm" :submit="handleSubmit">
         <div class="flex justify-end">
-          <UButton type="submit">Submit</UButton>
+          <UButton type="button" @click="handleSubmit">Submit</UButton>
         </div>
       </slot>
     </template>

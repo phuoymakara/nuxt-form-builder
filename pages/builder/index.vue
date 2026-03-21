@@ -7,9 +7,7 @@ import type { JSONFormConfig, JSONField, JSONSection, ValidationRule } from "~/u
 
 definePageMeta({ title: "Form Builder" });
 
-// ---------------------------------------------------------------------------
 // Types
-// ---------------------------------------------------------------------------
 
 interface CanvasField extends JSONField {
   _id: string;
@@ -39,27 +37,31 @@ interface PaletteItem {
   defaultItems?: Array<{ label: string; value: string }>;
   isAddressGroup?: boolean;
   isFile?: boolean;
+  isDatePicker?: boolean;
+  isAsyncSelect?: boolean;
+  isFileUpload?: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Palette
-// ---------------------------------------------------------------------------
 
 const palette: PaletteItem[] = [
   { component: "UInput", label: "Text Input", icon: "i-heroicons-pencil" },
   { component: "UTextarea", label: "Textarea", icon: "i-heroicons-bars-3-bottom-left", defaultProps: { rows: 3 } },
   { component: "USelect", label: "Select", icon: "i-heroicons-chevron-up-down", defaultItems: [{ label: "Option A", value: "a" }, { label: "Option B", value: "b" }] },
+  { component: "USelectMenu", label: "Select Menu", icon: "i-heroicons-magnifying-glass-circle", defaultItems: [{ label: "Option A", value: "a" }, { label: "Option B", value: "b" }] },
   { component: "URadioGroup", label: "Radio Group", icon: "i-heroicons-radio", defaultItems: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }], defaultProps: { orientation: "horizontal" } },
   { component: "UCheckboxGroup", label: "Checkbox Group", icon: "i-heroicons-check-circle", defaultItems: [{ label: "Item 1", value: "1" }, { label: "Item 2", value: "2" }] },
   { component: "UInputNumber", label: "Number", icon: "i-heroicons-hashtag", defaultProps: { min: 0 } },
   { component: "UInput", label: "Email", icon: "i-heroicons-envelope", defaultProps: { type: "email" } },
+  { component: "UCalendar", label: "Date Picker", icon: "i-heroicons-calendar-days", isDatePicker: true },
+  { component: "UAsyncSelect", label: "Async Search", icon: "i-heroicons-magnifying-glass", isAsyncSelect: true },
+  { component: "USwitch", label: "Switch", icon: "i-heroicons-toggle-left" },
+  { component: "UFileUpload", label: "Photo / Avatar", icon: "i-heroicons-photo", isFileUpload: true },
   { component: "UFileInput", label: "File Upload", icon: "i-heroicons-paper-clip", isFile: true },
   { component: "UAddress", label: "Full Address", icon: "i-heroicons-map-pin", isAddressGroup: true },
 ];
 
-// ---------------------------------------------------------------------------
 // State
-// ---------------------------------------------------------------------------
 
 const { savedForms, saveForm, loadForm, deleteForm } = useFormStorage();
 const toast = useToast();
@@ -104,9 +106,7 @@ function selectField(id: string) {
   rightPanel.value = "field";
 }
 
-// ---------------------------------------------------------------------------
 // Page management
-// ---------------------------------------------------------------------------
 
 function addPage() {
   pages.value.push(newPage(`Step ${pages.value.length + 1}`));
@@ -140,9 +140,7 @@ function setActivePage(idx: number) {
   rightPanel.value = "page";
 }
 
-// ---------------------------------------------------------------------------
 // Section management
-// ---------------------------------------------------------------------------
 
 function addSection() {
   currentPage.value.sections.push(newSection(`Section ${currentPage.value.sections.length + 1}`));
@@ -173,9 +171,7 @@ function setActiveSection(idx: number) {
   rightPanel.value = "section";
 }
 
-// ---------------------------------------------------------------------------
 // Drag & drop
-// ---------------------------------------------------------------------------
 
 const draggingFrom = ref<"palette" | "canvas" | null>(null);
 const draggingPaletteItem = ref<PaletteItem | null>(null);
@@ -216,6 +212,53 @@ function makeField(item: PaletteItem, sectionFields: CanvasField[]): CanvasField
       { _id: uid(), _group: "Address", name: "commune", label: "ឃុំ/សង្កាត់", component: "UAddress", type: "select", colSpan: 6, clearOnChange: true, dependsOn: ["district", "province"], props: { apiEndpoint: "/api/address/communes", searchable: true, labelKey: "name_kh", valueKey: "code", placeholder: "ជ្រើសរើសឃុំ...", addressQueryParamKey: "district_code", addressQueryParamSourceField: "district" } },
       { _id: uid(), _group: "Address", name: "village", label: "ភូមិ", component: "UAddress", type: "select", colSpan: 6, clearOnChange: true, dependsOn: ["commune", "district", "province"], props: { apiEndpoint: "/api/address/villages", searchable: true, labelKey: "name_kh", valueKey: "code", placeholder: "ជ្រើសរើសភូមិ...", addressQueryParamKey: "commune_code", addressQueryParamSourceField: "commune" } },
     ];
+  }
+  if (item.isDatePicker) {
+    return [{
+      _id: uid(),
+      name: `field_${++_seq}`,
+      label: item.label,
+      component: "UCalendar",
+      type: "date",
+      placeholder: "Select date...",
+      colSpan: 12,
+      row: sectionFields.length + 1,
+    }];
+  }
+  if (item.isAsyncSelect) {
+    return [{
+      _id: uid(),
+      name: `field_${++_seq}`,
+      label: item.label,
+      component: "UAsyncSelect",
+      type: "select",
+      placeholder: "Search...",
+      colSpan: 12,
+      row: sectionFields.length + 1,
+      props: {
+        apiEndpoint: "",
+        searchParam: "q",
+        debounce: 300,
+        minChars: 2,
+        placeholder: "Search...",
+        noResultsText: "No results found",
+        loadingText: "Loading...",
+      },
+    }];
+  }
+  if (item.isFileUpload) {
+    return [{
+      _id: uid(),
+      name: `field_${++_seq}`,
+      label: item.label,
+      component: "UFileUpload",
+      colSpan: 12,
+      row: sectionFields.length + 1,
+      props: {
+        accept: "image/*",
+        multiple: false,
+      },
+    }];
   }
   return [{
     _id: uid(),
@@ -276,9 +319,7 @@ function recalcRows() {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Config panel — field editing
-// ---------------------------------------------------------------------------
 
 function updateSelected(patch: Partial<CanvasField>) {
   if (!selectedId.value) return;
@@ -333,14 +374,14 @@ function updateRule(field: CanvasField, idx: number, patch: Partial<ValidationRu
 }
 
 const supportsValidation = ["UInput", "UTextarea", "UInputNumber", "USelect", "URadioGroup", "USelectMenu"];
-const supportsRequiredMessage = ["UAddress", "UAsyncSelect"];
+const supportsRequiredMessage = ["UAddress", "UAsyncSelect", "UCalendar"];
 
 function getAddressRequiredMessage(field: CanvasField): string { return field.validation?.[0]?.message ?? ""; }
 function setAddressRequiredMessage(message: string) {
   updateSelected({ validation: message.trim() ? [{ type: "required" as const, message }] : [] });
 }
 
-const hasItems = ["USelect", "URadioGroup", "UCheckboxGroup"];
+const hasItems = ["USelect", "URadioGroup", "UCheckboxGroup", "USelectMenu"];
 
 function addItem(field: CanvasField) {
   const items = [...(field.items ?? [])];
@@ -366,9 +407,7 @@ const colSpanOptions = [
   { label: "Quarter (3)", value: 3 },
 ];
 
-// ---------------------------------------------------------------------------
 // Serialise → JSONFormConfig
-// ---------------------------------------------------------------------------
 
 function toJSONField(f: CanvasField): JSONField {
   const { _id, _group, ...rest } = f;
@@ -409,9 +448,7 @@ function buildConfig(): JSONFormConfig {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Save / Load / Export / Preview
-// ---------------------------------------------------------------------------
 
 const { refresh } = useFormStorage();
 const showPreview = ref(false);
@@ -478,8 +515,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
-    <!-- Toolbar -->
+  <div class="h-screen bg-gray-50 flex flex-col">
+    <!-- Header -->
     <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shrink-0">
       <div class="flex items-center gap-3">
         <AppBackButton fallback="/" />
@@ -488,7 +525,7 @@ onMounted(() => {
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Single / Multi-step toggle -->
+        <!-- Multi-step toggle -->
         <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5">
           <UIcon name="i-heroicons-document" class="size-4 text-gray-400" />
           <span class="text-xs text-gray-600">Multi-step</span>
@@ -505,10 +542,10 @@ onMounted(() => {
     <!-- Three-panel layout -->
     <div class="flex flex-1 overflow-hidden">
 
-      <!-- Palette -->
-      <aside class="w-52 bg-white border-r border-gray-200 p-3 overflow-y-auto shrink-0">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">Fields</p>
-        <div class="space-y-1.5">
+      <!-- Left: field palette -->
+      <aside class="w-52 bg-white border-r border-gray-200 p-1 flex flex-col shrink-0 overflow-hidden">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1 shrink-0">Fields</p>
+        <div class="space-y-1.5 overflow-y-auto flex-1 py-3" style="scrollbar-width:thin;scrollbar-color:#e5e7eb transparent">
           <div
             v-for="item in palette"
             :key="item.label + item.component"
@@ -522,10 +559,10 @@ onMounted(() => {
         </div>
       </aside>
 
-      <!-- Canvas -->
-      <main class="flex-1 overflow-y-auto flex flex-col">
+      <!-- Center: canvas -->
+      <main class="flex-1 overflow-hidden flex flex-col ">
 
-        <!-- Multi-step: page tabs -->
+        <!-- Page tabs (multi-step only) -->
         <div v-if="isMultiStep" class="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2 shrink-0 overflow-x-auto">
           <button
             v-for="(page, pi) in pages"
@@ -552,11 +589,11 @@ onMounted(() => {
           </UButton>
         </div>
 
-        <!-- Page canvas area -->
-        <div class="flex-1 p-6 overflow-y-auto">
+        <!-- Scrollable body -->
+        <div class="flex-1 p-6 overflow-y-auto"  style="scrollbar-width:none;scrollbar-color:#e5e7eb transparent">
           <div class="max-w-2xl mx-auto space-y-4">
 
-            <!-- Section tabs (within page) -->
+            <!-- Section tabs -->
             <div class="flex items-center gap-2 flex-wrap">
               <button
                 v-for="(sec, si) in currentPage.sections"
@@ -584,12 +621,12 @@ onMounted(() => {
               </UButton>
             </div>
 
-            <!-- Current section card -->
+            <!-- Section card -->
             <div
               class="bg-white border border-gray-200 rounded-2xl overflow-hidden"
               :class="{ 'border-primary-300': activeSectionIdx >= 0 }"
             >
-              <!-- Section header -->
+              <!-- Header -->
               <div
                 class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 cursor-pointer"
                 @click="rightPanel = 'section'; selectedId = null"
@@ -602,9 +639,9 @@ onMounted(() => {
                 <UIcon name="i-heroicons-pencil-square" class="size-4 text-gray-300" />
               </div>
 
-              <!-- Fields drop zone -->
+              <!-- Drop zone -->
               <div class="p-4">
-                <!-- Empty state -->
+                <!-- Empty -->
                 <div
                   v-if="currentSection?.fields.length === 0"
                   class="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center py-12 text-center"
@@ -616,10 +653,10 @@ onMounted(() => {
                   <p class="text-sm text-gray-400">Drag fields here</p>
                 </div>
 
-                <!-- Field list -->
+                <!-- Fields -->
                 <div v-else class="space-y-1">
                   <template v-for="(field, fi) in currentSection?.fields ?? []" :key="field._id">
-                    <!-- Drop zone above -->
+                    <!-- Drop indicator -->
                     <div
                       class="h-1.5 rounded-full transition-colors"
                       :class="dragOverSectionId === currentSection?._id && dragOverIndex === fi ? 'bg-primary-400' : 'bg-transparent'"
@@ -627,7 +664,7 @@ onMounted(() => {
                       @dragleave="onDragLeave"
                       @drop.prevent="onDrop(currentSection!._id, fi, $event)"
                     />
-                    <!-- Field card -->
+                    <!-- Field row -->
                     <div
                       class="group flex items-center justify-between border rounded-xl px-4 py-3 cursor-pointer transition-all"
                       :class="selectedId === field._id
@@ -657,7 +694,7 @@ onMounted(() => {
                     </div>
                   </template>
 
-                  <!-- Final drop zone -->
+                  <!-- Tail drop indicator -->
                   <div
                     class="h-1.5 rounded-full transition-colors"
                     :class="dragOverSectionId === currentSection?._id && dragOverIndex === currentSection?.fields.length ? 'bg-primary-400' : 'bg-transparent'"
@@ -672,8 +709,8 @@ onMounted(() => {
         </div>
       </main>
 
-      <!-- Config panel -->
-      <aside class="w-72 bg-white border-l border-gray-200 overflow-y-auto shrink-0">
+      <!-- Right: config panel -->
+      <aside class="w-72 bg-white border-l border-gray-200 overflow-y-auto shrink-0" style="scrollbar-width:thin;scrollbar-color:#e5e7eb transparent">
 
         <!-- Field config -->
         <div v-if="rightPanel === 'field' && selectedField" class="p-4 space-y-4">
@@ -696,15 +733,15 @@ onMounted(() => {
           <UFormField label="Placeholder">
             <UInput :model-value="selectedField.placeholder" placeholder="Hint text…" size="sm" @update:model-value="updateSelected({ placeholder: $event as string })" />
           </UFormField>
-          <UFormField label="Width">
-            <USelect :model-value="selectedField.colSpan ?? 12" :items="colSpanOptions" size="sm" @update:model-value="updateSelected({ colSpan: Number($event) }); recalcRows()" />
+          <UFormField label="Width" class="w-full col-span-full">
+            <USelect class="w-[70%]" :model-value="selectedField.colSpan ?? 12" :items="colSpanOptions" size="sm" @update:model-value="updateSelected({ colSpan: Number($event) }); recalcRows()" />
           </UFormField>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-700">Required</span>
             <USwitch :model-value="selectedField.required ?? false" @update:model-value="updateSelected({ required: $event as boolean })" />
           </div>
 
-          <!-- Validation rules (string components) -->
+          <!-- Validation rules -->
           <template v-if="supportsValidation.includes(selectedField.component)">
             <div>
               <div class="flex items-center justify-between mb-2">
@@ -725,7 +762,7 @@ onMounted(() => {
             </div>
           </template>
 
-          <!-- Required message (address / async select) -->
+          <!-- Required message -->
           <template v-if="supportsRequiredMessage.includes(selectedField.component)">
             <div class="space-y-1.5">
               <p class="text-sm font-medium text-gray-700">Required Error Message</p>
@@ -734,7 +771,29 @@ onMounted(() => {
             </div>
           </template>
 
-          <!-- Options (select / radio / checkbox) -->
+          <!-- Async select config -->
+          <template v-if="selectedField.component === 'UAsyncSelect'">
+            <div class="space-y-3">
+              <p class="text-sm font-medium text-gray-700">Async Search Config</p>
+              <UFormField label="API Endpoint">
+                <UInput :model-value="selectedField.props?.apiEndpoint ?? ''" placeholder="/api/search" size="sm" @update:model-value="updateSelected({ props: { ...selectedField.props, apiEndpoint: $event as string } })" />
+              </UFormField>
+              <UFormField label="Search Param">
+                <UInput :model-value="selectedField.props?.searchParam ?? 'q'" placeholder="q" size="sm" @update:model-value="updateSelected({ props: { ...selectedField.props, searchParam: $event as string } })" />
+              </UFormField>
+              <UFormField label="Min Chars to Search">
+                <UInputNumber :model-value="selectedField.props?.minChars ?? 2" :min="0" size="sm" @update:model-value="updateSelected({ props: { ...selectedField.props, minChars: Number($event) } })" />
+              </UFormField>
+              <UFormField label="Debounce (ms)">
+                <UInputNumber :model-value="selectedField.props?.debounce ?? 300" :min="0" :step="50" size="sm" @update:model-value="updateSelected({ props: { ...selectedField.props, debounce: Number($event) } })" />
+              </UFormField>
+              <UFormField label="No Results Text">
+                <UInput :model-value="selectedField.props?.noResultsText ?? 'No results found'" size="sm" @update:model-value="updateSelected({ props: { ...selectedField.props, noResultsText: $event as string } })" />
+              </UFormField>
+            </div>
+          </template>
+
+          <!-- Options -->
           <template v-if="hasItems.includes(selectedField.component)">
             <div>
               <div class="flex items-center justify-between mb-2">
@@ -779,7 +838,7 @@ onMounted(() => {
           </UFormField>
         </div>
 
-        <!-- Empty state -->
+        <!-- Empty -->
         <div v-else class="flex flex-col items-center justify-center h-full py-16 text-center px-6">
           <UIcon name="i-heroicons-cursor-arrow-rays" class="size-8 text-gray-200 mb-3" />
           <p class="text-sm text-gray-400">Click a field, section, or step to configure it</p>
@@ -809,7 +868,7 @@ onMounted(() => {
               </V2FormRenderer>
             </template>
             <template v-else>
-              <V2WizardRenderer :config="previewConfig" @submit="(d) => { console.log('Preview:', d); showPreview = false; }" />
+              <V2WizardRenderer :config="previewConfig" @submit="(d: Record<string, any>) => { console.log('Preview:', d); showPreview = false; }" />
             </template>
           </div>
           <div v-else class="py-8 text-center text-gray-400">No fields to preview.</div>

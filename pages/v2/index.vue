@@ -3,9 +3,7 @@ import { ref } from "vue";
 import { z } from "zod";
 import FormBuilder from "~/components/v2/FormBuilder";
 
-// ---------------------------------------------------------------------------
 // Form: Contact form with conditional field
-// ---------------------------------------------------------------------------
 
 const ContactForm = new FormBuilder()
   .addRow([
@@ -110,9 +108,7 @@ const ContactForm = new FormBuilder()
   })
   .build();
 
-// ---------------------------------------------------------------------------
 // Page state
-// ---------------------------------------------------------------------------
 
 const toast = useToast();
 const lastSubmit = ref<Record<string, any> | null>(null);

@@ -12,11 +12,13 @@ function getFieldDefault(field: FieldWithConditions): any {
     case "UFileInput":
     case "UFileUpload":
       return null;
+    case "USwitch":
+      return false;
     case "UCalendar":
     case "URadioGroup":
     case "USelect":
     case "USelectMenu":
-      return ""; // string selectors — must be "" so z.string() doesn't error on mount
+      return "";
     case "UAsyncSelect":
     case "UAddress":
       return null; // object/complex values — use z.any() in validation

@@ -1,9 +1,7 @@
 import type { JSONFormConfig } from "~/utils/form-schema";
 
 export const formTemplates: JSONFormConfig[] = [
-  // ---------------------------------------------------------------------------
   // 1. Contact Form
-  // ---------------------------------------------------------------------------
   {
     id: "contact",
     title: "Contact Us",
@@ -90,10 +88,7 @@ export const formTemplates: JSONFormConfig[] = [
       },
     ],
   },
-
-  // ---------------------------------------------------------------------------
   // 2. Job Application (multi-page)
-  // ---------------------------------------------------------------------------
   {
     id: "job-application",
     title: "Job Application",
@@ -249,10 +244,7 @@ export const formTemplates: JSONFormConfig[] = [
       },
     ],
   },
-
-  // ---------------------------------------------------------------------------
   // 3. Event Registration
-  // ---------------------------------------------------------------------------
   {
     id: "event-registration",
     title: "Event Registration",

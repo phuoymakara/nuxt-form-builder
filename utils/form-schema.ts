@@ -3,9 +3,7 @@ import type { ZodType } from "zod";
 import type { FieldWithConditions } from "~/types/form-builder";
 import type { FormConfig, FormPage, FormSection } from "~/constants/form-builder";
 
-// ---------------------------------------------------------------------------
 // Serializable condition types (no functions — safe for JSON / API)
-// ---------------------------------------------------------------------------
 
 export type ConditionOp = "eq" | "neq" | "in" | "nin" | "empty" | "notempty";
 
@@ -69,9 +67,7 @@ export interface JSONFormConfig {
   pages: JSONPage[];
 }
 
-// ---------------------------------------------------------------------------
 // Condition evaluator
-// ---------------------------------------------------------------------------
 
 export function evalCondition(
   rule: ConditionRule,
@@ -96,24 +92,29 @@ export function evalCondition(
   }
 }
 
-// ---------------------------------------------------------------------------
 // Zod schema builder from ValidationRule[]
-// ---------------------------------------------------------------------------
 
-// components that store objects, not strings — only support "required" rule
 const OBJECT_VALUE_COMPONENTS = ["UAddress", "UAsyncSelect"];
+const ARRAY_VALUE_COMPONENTS = ["UCheckboxGroup", "UCheckbox"];
 
 export function buildValidation(
   rules: ValidationRule[],
   component: string,
 ): ZodType {
-  // object-value components: only a presence check makes sense
   if (OBJECT_VALUE_COMPONENTS.includes(component)) {
     const req = rules.find((r) => r.type === "required");
     return z.any().refine(
       (v) => v !== null && v !== undefined && typeof v === "object",
       { message: req?.message ?? `${component} is required` },
     );
+  }
+
+  // array-value components: use z.array() + min(1) for required
+  if (ARRAY_VALUE_COMPONENTS.includes(component)) {
+    let schema: ZodType = z.array(z.string());
+    const req = rules.find((r) => r.type === "required");
+    if (req) schema = (schema as any).min(1, req.message);
+    return schema;
   }
 
   let schema: ZodType = component === "UInputNumber" ? z.number() : z.string();
@@ -155,9 +156,7 @@ export function buildValidation(
   return schema;
 }
 
-// ---------------------------------------------------------------------------
 // Interpret a JSONField → FieldWithConditions
-// ---------------------------------------------------------------------------
 
 function interpretField(jf: JSONField): FieldWithConditions {
   const field: FieldWithConditions = {
@@ -198,24 +197,20 @@ function interpretField(jf: JSONField): FieldWithConditions {
   if (jf.validation?.length) {
     field.validation = buildValidation(jf.validation, jf.component);
   } else if (jf.required) {
-    // auto-required when no explicit rules but field is marked required
-    // components that store non-string values need z.any() refine instead of z.string()
-    const usesObjectValue =
-      jf.component === "UFileInput" ||
-      jf.component === "UFileUpload" ||
-      jf.component === "UAddress" ||
-      jf.component === "UAsyncSelect";
+    const msg = `${jf.label || jf.name} is required`;
+    const usesObjectValue = ["UFileInput", "UFileUpload", "UAddress", "UAsyncSelect"].includes(jf.component);
+    const usesArrayValue = ["UCheckboxGroup", "UCheckbox"].includes(jf.component);
     field.validation = usesObjectValue
-      ? z.any().refine((v) => v !== null && v !== undefined, { message: `${jf.label || jf.name} is required` })
-      : z.string().min(1, `${jf.label || jf.name} is required`);
+      ? z.any().refine((v) => v !== null && v !== undefined, { message: msg })
+      : usesArrayValue
+        ? z.array(z.string()).min(1, msg)
+        : z.string().min(1, msg);
   }
 
   return field;
 }
 
-// ---------------------------------------------------------------------------
 // Interpret full JSONFormConfig → FormConfig (runtime, with functions)
-// ---------------------------------------------------------------------------
 
 export function interpretConfig(json: JSONFormConfig): FormConfig {
   const pages: FormPage[] = json.pages.map((jp) => {

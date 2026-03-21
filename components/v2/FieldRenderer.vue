@@ -76,11 +76,19 @@ function fieldProps() {
       @update:model-value="value = $event"
     />
 
+    <!-- switch / toggle -->
+    <USwitch
+      v-else-if="field.component === 'USwitch'"
+      v-model="value"
+      :disabled="disabled"
+      v-bind="{ ...field.props, ...field.attrs }"
+    />
+
     <!-- image / avatar upload -->
     <UFileUpload
       v-else-if="field.component === 'UFileUpload'"
       :model-value="value"
-      v-bind="{ ...field.props, ...field.attrs }"
+      v-bind="{ accept: 'image/*', ...field.props, ...field.attrs }"
       :disabled="disabled"
       @update:model-value="value = $event"
     />

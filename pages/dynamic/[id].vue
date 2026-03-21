@@ -104,9 +104,9 @@ function handleSubmit(data: Record<string, any>) {
                 :fields="runtimeConfig.pages[0].fields ?? runtimeConfig.pages[0].sections?.[0]?.fields ?? []"
                 @submit="handleSubmit"
               >
-                <template #actions>
+                <template #actions="{ submit }">
                   <div class="flex justify-end pt-2">
-                    <UButton type="submit" icon="i-heroicons-paper-airplane">
+                    <UButton type="button" icon="i-heroicons-paper-airplane" @click="submit">
                       {{ activeConfig?.submitButtonText ?? "Submit" }}
                     </UButton>
                   </div>

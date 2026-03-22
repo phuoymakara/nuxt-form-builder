@@ -56,9 +56,13 @@ function colSpanClass(field: FieldWithConditions): string {
   return COL_SPAN[field.colSpan ?? 12] ?? "col-span-12";
 }
 
-function handleFieldChange(field: FieldWithConditions, newValue: any) {
+async function handleFieldChange(field: FieldWithConditions, newValue: any) {
   setValue(field.name, newValue);
   emit("change", field.name, newValue);
+  // Re-validate just this field so its error clears immediately when value becomes valid
+  if (formRef.value) {
+    try { await formRef.value.validate({ name: field.name, silent: true }); } catch { /* expected */ }
+  }
 }
 
 const formRef = ref<any>(null);

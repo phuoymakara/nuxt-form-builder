@@ -38,7 +38,7 @@
 
       <!-- Single Section (flat fields) -->
       <div v-if="currentPage.fields && !currentPage.sections">
-        <BuilderWizadForm
+        <V1WizadForm
           :ref="(el) => registerFormRef(currentPageIndex, 'main', el)"
           v-model="formData[currentPage.id]"
           :fields="currentPage.fields"
@@ -72,7 +72,7 @@
           </div>
 
           <!-- Section Fields -->
-          <BuilderWizadForm
+          <V1WizadForm
             :ref="(el) => registerFormRef(currentPageIndex, section.id, el)"
             v-model="formData[currentPage.id][section.id]"
             :fields="section.fields"
@@ -177,7 +177,7 @@ const getAllPageFormRefs = (index = currentPageIndex.value) => {
 //   pageErrors[page.id] = errors
 //   return isValid
 // }
-// In BuilderWizardFormContainer.vue - FIX THE VALIDATION FUNCTION
+// In V1WizardFormContainer.vue - FIX THE VALIDATION FUNCTION
 
 const validatePage = (index = currentPageIndex.value): boolean => {
   const page = props.config.pages[index];

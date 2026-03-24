@@ -6,7 +6,6 @@ export interface ConfirmModalOptions {
   icon?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Nuxt UI color for the confirm button — default "error" */
   confirmColor?: "error" | "primary" | "warning" | "success" | "neutral";
   onConfirm: () => void | Promise<void>;
   onCancel?: () => void;

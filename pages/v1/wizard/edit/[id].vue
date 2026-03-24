@@ -19,7 +19,7 @@
     </div>
 
     <!-- Form -->
-    <BuilderWizardFormContainer
+    <V1WizardFormContainer
       v-else
       ref="wizard"
       :config="configWithDefaults"
@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { BuilderWizardFormContainer } from "#components";
+import { V1WizardFormContainer } from "#components";
 import { ref, computed } from "vue";
 import { jobApplicationFormConfig } from "~/constants/form-builder";
 import { useFormBuilder } from "~/services/form-builder";

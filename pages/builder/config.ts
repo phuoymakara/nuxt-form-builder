@@ -47,6 +47,7 @@ export interface PaletteItem {
   isTable?: boolean;
   isOtp?: boolean;
   isRepeater?: boolean;
+  isMap?: boolean;
 }
 
 export const palette: PaletteItem[] = [
@@ -164,6 +165,12 @@ export const palette: PaletteItem[] = [
     label: "Repeater Group",
     icon: "i-heroicons-queue-list",
     isRepeater: true,
+  },
+  {
+    component: "UMapPicker",
+    label: "Map Picker",
+    icon: "i-heroicons-map-pin",
+    isMap: true,
   },
 ];
 
@@ -312,6 +319,20 @@ export function makeField(
             { key: "field2", label: "Field 2", type: "text" },
           ],
         },
+      },
+    ];
+  }
+  if (item.isMap) {
+    return [
+      {
+        _id: uid(),
+        name: `field_${Date.now()}`,
+        label: item.label,
+        component: "UMapPicker",
+        type: "text",
+        placeholder: "No location selected",
+        colSpan: 12,
+        row: sectionFields.length + 1,
       },
     ];
   }

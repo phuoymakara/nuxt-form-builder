@@ -27,6 +27,7 @@ export const supportsRequiredMessage = [
   "UTagInput",
   "UDateRange",
   "UOtpInput",
+  "UMapPicker",
 ];
 
 export const hasItems = ["USelect", "URadioGroup", "UCheckboxGroup", "USelectMenu"];

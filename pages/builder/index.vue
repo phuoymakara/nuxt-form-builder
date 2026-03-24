@@ -714,11 +714,21 @@ const COL_SPAN_CLASS: Record<number, string> = {
 
                               <!-- Table / Repeater -->
                               <div
-                                v-else-if="['UTable','URepeater'].includes(field.component)"
+                                v-else-if="['UTableField','URepeater'].includes(field.component)"
                                 class="h-8 border border-gray-200 rounded-md bg-white flex items-center px-3 gap-2"
                               >
                                 <UIcon name="i-heroicons-table-cells" class="size-3.5 text-gray-300 shrink-0" />
-                                <span class="text-xs text-gray-300">{{ field.component === 'UTable' ? 'Table' : 'Repeater' }}</span>
+                                <span class="text-xs text-gray-300">{{ field.component === 'UTableField' ? 'Table' : 'Repeater' }}</span>
+                              </div>
+
+                              <!-- Map Picker -->
+                              <div
+                                v-else-if="field.component === 'UMapPicker'"
+                                class="h-8 border border-gray-200 rounded-md bg-white flex items-center px-3 gap-2"
+                              >
+                                <UIcon name="i-heroicons-map-pin" class="size-3.5 text-gray-300 shrink-0" />
+                                <span class="text-xs text-gray-300 flex-1 truncate">No location selected</span>
+                                <UIcon name="i-heroicons-map" class="size-3.5 text-gray-300 shrink-0" />
                               </div>
                             </div>
                           </div>

@@ -69,6 +69,15 @@ function fieldProps() {
       @update:model-value="value = $event"
     />
 
+    <!-- map picker -->
+    <BaseMapPicker
+      v-else-if="field.component === 'UMapPicker'"
+      :field="field"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
     <!-- cascading address -->
     <BaseAddress
       v-else-if="field.component === 'UAddress'"

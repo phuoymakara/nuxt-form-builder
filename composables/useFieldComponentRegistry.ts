@@ -2,7 +2,7 @@ import type { Component } from "vue";
 import BaseDatePicker from "~/components/base/date-picker.vue";
 import BaseAddress from "~/components/base/address.vue";
 import BaseAsyncSelect from "~/components/base/asyn-select.vue";
-import { resolveComponentMap } from "~/components/builder/ui-helper";
+import { resolveComponentMap } from "~/utils/ui-helper";
 // import BaseFileInput from '~/components/form/BaseFileInput.vue'
 
 /**

@@ -28,6 +28,22 @@ export interface JSONOption {
   value: string;
 }
 
+export interface TableColumn {
+  key: string;
+  label: string;
+  type: "text" | "number" | "select";
+  placeholder?: string;
+  options?: JSONOption[];
+}
+
+export interface JSONRow {
+  id: string;
+  layout: "auto" | "flex" | "grid";
+  cols?: 1 | 2 | 3 | 4;
+  gap?: "sm" | "md" | "lg";
+  fields: JSONField[];
+}
+
 export interface JSONField {
   name: string;
   label?: string;
@@ -51,7 +67,8 @@ export interface JSONSection {
   description?: string;
   icon?: string;
   displayStyle?: "card" | "collapse" | "plain";
-  fields: JSONField[];
+  rows?: JSONRow[];
+  fields?: JSONField[];
 }
 
 export interface JSONPage {
@@ -109,8 +126,14 @@ export function evalCondition(
 
 // Zod schema builder from ValidationRule[]
 
-const OBJECT_VALUE_COMPONENTS = ["UAddress", "UAsyncSelect"];
-const ARRAY_VALUE_COMPONENTS = ["UCheckboxGroup", "UCheckbox"];
+const OBJECT_VALUE_COMPONENTS = [
+  "UAddress",
+  "UAsyncSelect",
+  "UDateRange",
+  "UFullAddress",
+];
+const ARRAY_VALUE_COMPONENTS = ["UCheckboxGroup", "UCheckbox", "UTagInput"];
+const TABLE_COMPONENTS = ["UTableField", "URepeater"];
 
 export function buildValidation(
   rules: ValidationRule[],
@@ -133,7 +156,15 @@ export function buildValidation(
     return schema;
   }
 
-  let schema: ZodType = component === "UInputNumber" ? z.number() : z.string();
+  // table field: array of row objects, min(1) for required
+  if (TABLE_COMPONENTS.includes(component)) {
+    let schema: ZodType = z.array(z.any());
+    const req = rules.find((r) => r.type === "required");
+    if (req) schema = (schema as any).min(1, req.message);
+    return schema;
+  }
+
+  let schema: ZodType = z.string();
 
   for (const rule of rules) {
     switch (rule.type) {
@@ -217,15 +248,21 @@ function interpretField(jf: JSONField): FieldWithConditions {
       "UFileUpload",
       "UAddress",
       "UAsyncSelect",
+      "UDateRange",
     ].includes(jf.component);
-    const usesArrayValue = ["UCheckboxGroup", "UCheckbox"].includes(
-      jf.component,
-    );
+    const usesArrayValue = [
+      "UCheckboxGroup",
+      "UCheckbox",
+      "UTagInput",
+    ].includes(jf.component);
+    const usesTableValue = TABLE_COMPONENTS.includes(jf.component);
     field.validation = usesObjectValue
       ? z.any().refine((v) => v !== null && v !== undefined, { message: msg })
       : usesArrayValue
         ? z.array(z.string()).min(1, msg)
-        : z.string().min(1, msg);
+        : usesTableValue
+          ? z.array(z.any()).min(1, msg)
+          : z.string().min(1, msg);
   }
 
   return field;
@@ -248,7 +285,17 @@ export function interpretConfig(json: JSONFormConfig): FormConfig {
         description: js.description,
         icon: js.icon,
         displayStyle: js.displayStyle,
-        fields: js.fields.map(interpretField),
+        ...(js.rows?.length
+          ? {
+              rows: js.rows.map((jr) => ({
+                id: jr.id,
+                layout: jr.layout,
+                cols: jr.cols,
+                gap: jr.gap,
+                fields: jr.fields.map(interpretField),
+              })),
+            }
+          : { fields: (js.fields ?? []).map(interpretField) }),
       })) as FormSection[];
     } else if (jp.fields) {
       page.fields = jp.fields.map(interpretField);

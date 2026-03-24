@@ -3,13 +3,22 @@ import type { ZodTypeAny } from "zod";
 
 export type SectionDisplayStyle = "card" | "collapse" | "plain";
 
+export interface FormRow {
+  id: string;
+  layout: "auto" | "flex" | "grid";
+  cols?: 1 | 2 | 3 | 4;
+  gap?: "sm" | "md" | "lg";
+  fields: any[]; // FieldWithConditions[]
+}
+
 export interface FormSection {
   id: string;
   title: string;
   description?: string;
   icon?: string;
   displayStyle?: SectionDisplayStyle;
-  fields: FieldWithConditions[];
+  rows?: FormRow[];
+  fields?: any[]; // legacy flat — keep for backward compat
 }
 
 export interface FormPage {

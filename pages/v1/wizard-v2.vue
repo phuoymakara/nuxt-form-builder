@@ -15,10 +15,7 @@
   <div class="min-h-screen bg-gray-50 p-8">
     <!-- Wizard -->
 
-    <V1WizardFormContainer
-      ref="wizard"
-      :config="jobApplicationFormConfig"
-    />
+    <V1WizardFormContainer ref="wizard" :config="jobApplicationFormConfig" />
 
     <!-- Actions -->
     <div class="w-6/12 mx-auto mt-10 flex justify-between gap-4">

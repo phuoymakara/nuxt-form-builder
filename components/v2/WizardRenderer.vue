@@ -219,7 +219,8 @@ defineExpose({
             :ref="
               (el: any) => registerRef(`${currentPage.id}:${section.id}`, el)
             "
-            :fields="(section as FormSection).fields"
+            :rows="(section as FormSection).rows"
+            :fields="!(section as FormSection).rows?.length ? ((section as FormSection).fields ?? []) : undefined"
             :initial-values="formData[currentPage.id]?.[section.id]"
             hide-actions
             @submit="() => {}"
@@ -269,7 +270,8 @@ defineExpose({
               :ref="
                 (el: any) => registerRef(`${currentPage.id}:${section.id}`, el)
               "
-              :fields="(section as FormSection).fields"
+              :rows="(section as FormSection).rows"
+              :fields="!(section as FormSection).rows?.length ? ((section as FormSection).fields ?? []) : undefined"
               :initial-values="formData[currentPage.id]?.[section.id]"
               hide-actions
               @submit="() => {}"
@@ -302,7 +304,8 @@ defineExpose({
             :ref="
               (el: any) => registerRef(`${currentPage.id}:${section.id}`, el)
             "
-            :fields="(section as FormSection).fields"
+            :rows="(section as FormSection).rows"
+            :fields="!(section as FormSection).rows?.length ? ((section as FormSection).fields ?? []) : undefined"
             :initial-values="formData[currentPage.id]?.[section.id]"
             hide-actions
             @submit="() => {}"

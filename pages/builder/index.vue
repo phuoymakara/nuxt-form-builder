@@ -1,186 +1,57 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useFormStorage } from "~/composables/useFormStorage";
+import { ref, computed } from "vue";
 import { useConfirmModal } from "~/composables/useConfirmModal";
-import { interpretConfig } from "~/utils/form-schema";
-import type {
-  JSONFormConfig,
-  JSONField,
-  JSONSection,
-  ValidationRule,
-} from "~/utils/form-schema";
+import { palette } from "~/pages/builder/config";
+import type { CanvasRow, CanvasPage } from "~/pages/builder/config";
+import { uid, newRow, newSection, newPage } from "~/utils/canvas-factories";
+import { useBuilderDragDrop } from "~/composables/useBuilderDragDrop";
+import {
+  useFieldEditor,
+  ruleTypeOptions, ruleNeedsValue,
+  supportsValidation, supportsRequiredMessage,
+  hasItems, colTypeOptions, sectionStyleOptions, colSpanOptions,
+  ADDRESS_LEVELS, addressLevelLabels,
+} from "~/composables/useFieldEditor";
+import { useFormPersistence } from "~/composables/useFormPersistence";
 
 definePageMeta({ title: "Form Builder" });
 
-// Types
+// ── Core state 
 
-interface CanvasField extends JSONField {
-  _id: string;
-  _group?: string;
-}
-
-interface CanvasSection {
-  _id: string;
-  title: string;
-  description?: string;
-  icon?: string;
-  displayStyle?: "card" | "collapse" | "plain";
-  fields: CanvasField[];
-}
-
-interface CanvasPage {
-  _id: string;
-  title: string;
-  description?: string;
-  sections: CanvasSection[];
-}
-
-interface PaletteItem {
-  component: string;
-  label: string;
-  icon: string;
-  defaultProps?: Record<string, any>;
-  defaultItems?: Array<{ label: string; value: string }>;
-  isAddressGroup?: boolean;
-  isFile?: boolean;
-  isDatePicker?: boolean;
-  isAsyncSelect?: boolean;
-  isFileUpload?: boolean;
-}
-
-// Palette
-
-const palette: PaletteItem[] = [
-  { component: "UInput", label: "Text Input", icon: "i-heroicons-pencil" },
-  {
-    component: "UTextarea",
-    label: "Textarea",
-    icon: "i-heroicons-bars-3-bottom-left",
-    defaultProps: { rows: 3 },
-  },
-  {
-    component: "USelect",
-    label: "Select",
-    icon: "i-heroicons-chevron-up-down",
-    defaultItems: [
-      { label: "Option A", value: "a" },
-      { label: "Option B", value: "b" },
-    ],
-  },
-  {
-    component: "USelectMenu",
-    label: "Select Menu",
-    icon: "i-heroicons-magnifying-glass-circle",
-    defaultItems: [
-      { label: "Option A", value: "a" },
-      { label: "Option B", value: "b" },
-    ],
-  },
-  {
-    component: "URadioGroup",
-    label: "Radio Group",
-    icon: "i-heroicons-radio",
-    defaultItems: [
-      { label: "Yes", value: "yes" },
-      { label: "No", value: "no" },
-    ],
-    defaultProps: { orientation: "horizontal" },
-  },
-  {
-    component: "UCheckboxGroup",
-    label: "Checkbox Group",
-    icon: "i-heroicons-check-circle",
-    defaultItems: [
-      { label: "Item 1", value: "1" },
-      { label: "Item 2", value: "2" },
-    ],
-  },
-  {
-    component: "UInputNumber",
-    label: "Number",
-    icon: "i-heroicons-hashtag",
-    defaultProps: { min: 0 },
-  },
-  {
-    component: "UInput",
-    label: "Email",
-    icon: "i-heroicons-envelope",
-    defaultProps: { type: "email" },
-  },
-  {
-    component: "UCalendar",
-    label: "Date Picker",
-    icon: "i-heroicons-calendar-days",
-    isDatePicker: true,
-  },
-  {
-    component: "UAsyncSelect",
-    label: "Async Search",
-    icon: "i-heroicons-magnifying-glass",
-    isAsyncSelect: true,
-  },
-  { component: "USwitch", label: "Switch", icon: "i-heroicons-toggle-left" },
-  {
-    component: "UFileUpload",
-    label: "Photo / Avatar",
-    icon: "i-heroicons-photo",
-    isFileUpload: true,
-  },
-  {
-    component: "UFileInput",
-    label: "File Upload",
-    icon: "i-heroicons-paper-clip",
-    isFile: true,
-  },
-  {
-    component: "UAddress",
-    label: "Full Address",
-    icon: "i-heroicons-map-pin",
-    isAddressGroup: true,
-  },
-];
-
-// State
-
-const { savedForms, saveForm, loadForm, deleteForm } = useFormStorage();
-const toast = useToast();
-const route = useRoute();
 const modal = useConfirmModal();
-
-let _seq = 0;
-function uid() {
-  return `id_${Date.now()}_${++_seq}`;
-}
-
-function newSection(title = "Section"): CanvasSection {
-  return { _id: uid(), title, fields: [] };
-}
-
-function newPage(title = "Step"): CanvasPage {
-  return { _id: uid(), title, sections: [newSection("Section 1")] };
-}
 
 const isMultiStep = ref(false);
 const formTitle = ref("My Form");
 const formId = ref(`form-${Date.now()}`);
-const pages = ref<CanvasPage[]>([newPage("Page 1")]);
+const pages = ref<CanvasPage[]>([newPage("Step 1")]);
 const activePageIdx = ref(0);
 const activeSectionIdx = ref(0);
-const selectedId = ref<string | null>(null); // selected field _id
-
-// right-panel mode: "field" | "section" | "page" | null
-const rightPanel = ref<"field" | "section" | "page" | null>(null);
+const selectedId = ref<string | null>(null);
+const rightPanel = ref<"field" | "row" | "section" | "page" | null>(null);
 
 const currentPage = computed(() => pages.value[activePageIdx.value]);
-const currentSection = computed(
-  () => currentPage.value?.sections[activeSectionIdx.value],
-);
+const currentSection = computed(() => currentPage.value?.sections[activeSectionIdx.value]);
 
 const selectedField = computed(() => {
   for (const page of pages.value)
     for (const sec of page.sections)
-      for (const f of sec.fields) if (f._id === selectedId.value) return f;
+      for (const row of sec.rows)
+        for (const f of row.fields)
+          if (f._id === selectedId.value) return f;
   return null;
+});
+
+const duplicateNames = computed<Set<string>>(() => {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const page of pages.value)
+    for (const sec of page.sections)
+      for (const row of sec.rows)
+        for (const f of row.fields) {
+          if (seen.has(f.name)) dupes.add(f.name);
+          else seen.add(f.name);
+        }
+  return dupes;
 });
 
 function selectField(id: string) {
@@ -188,7 +59,7 @@ function selectField(id: string) {
   rightPanel.value = "field";
 }
 
-// Page management
+// ── Page management 
 
 function addPage() {
   pages.value.push(newPage(`Step ${pages.value.length + 1}`));
@@ -208,10 +79,7 @@ function removePage(idx: number) {
     confirmLabel: "Remove",
     onConfirm: () => {
       pages.value.splice(idx, 1);
-      activePageIdx.value = Math.min(
-        activePageIdx.value,
-        pages.value.length - 1,
-      );
+      activePageIdx.value = Math.min(activePageIdx.value, pages.value.length - 1);
       activeSectionIdx.value = 0;
       selectedId.value = null;
     },
@@ -225,12 +93,10 @@ function setActivePage(idx: number) {
   rightPanel.value = "page";
 }
 
-// Section management
+// ── Section management 
 
 function addSection() {
-  currentPage.value.sections.push(
-    newSection(`Section ${currentPage.value.sections.length + 1}`),
-  );
+  currentPage.value.sections.push(newSection(`Section ${currentPage.value.sections.length + 1}`));
   activeSectionIdx.value = currentPage.value.sections.length - 1;
   selectedId.value = null;
   rightPanel.value = "section";
@@ -246,10 +112,7 @@ function removeSection(idx: number) {
     confirmLabel: "Remove",
     onConfirm: () => {
       currentPage.value.sections.splice(idx, 1);
-      activeSectionIdx.value = Math.min(
-        activeSectionIdx.value,
-        currentPage.value.sections.length - 1,
-      );
+      activeSectionIdx.value = Math.min(activeSectionIdx.value, currentPage.value.sections.length - 1);
       selectedId.value = null;
     },
   });
@@ -261,512 +124,103 @@ function setActiveSection(idx: number) {
   rightPanel.value = "section";
 }
 
-// Drag & drop
+// ── Row management 
 
-const draggingFrom = ref<"palette" | "canvas" | null>(null);
-const draggingPaletteItem = ref<PaletteItem | null>(null);
-const draggingCanvasId = ref<string | null>(null);
-const draggingCanvasSectionId = ref<string | null>(null);
-const dragOverSectionId = ref<string | null>(null);
-const dragOverIndex = ref<number | null>(null);
+const selectedRowId = ref<string | null>(null);
 
-function onPaletteDragStart(item: PaletteItem, e: DragEvent) {
-  draggingFrom.value = "palette";
-  draggingPaletteItem.value = item;
-  e.dataTransfer!.effectAllowed = "copy";
+function selectRow(id: string) {
+  selectedRowId.value = id;
+  selectedId.value = null;
+  rightPanel.value = "row";
 }
 
-function onCanvasDragStart(fieldId: string, sectionId: string, e: DragEvent) {
-  draggingFrom.value = "canvas";
-  draggingCanvasId.value = fieldId;
-  draggingCanvasSectionId.value = sectionId;
-  e.dataTransfer!.effectAllowed = "move";
-}
+const selectedRow = computed(() => {
+  for (const page of pages.value)
+    for (const sec of page.sections)
+      for (const row of sec.rows)
+        if (row._id === selectedRowId.value) return row;
+  return null;
+});
 
-function onDragOver(sectionId: string, index: number, e: DragEvent) {
-  e.preventDefault();
-  dragOverSectionId.value = sectionId;
-  dragOverIndex.value = index;
-}
-
-function onDragLeave() {
-  dragOverSectionId.value = null;
-  dragOverIndex.value = null;
-}
-
-function makeField(
-  item: PaletteItem,
-  sectionFields: CanvasField[],
-): CanvasField[] {
-  if (item.isAddressGroup) {
-    return [
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "province",
-        label: "ខេត្ត/ក្រុង",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        props: {
-          apiEndpoint: "/api/address/provinces",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសខេត្ត...",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "district",
-        label: "ស្រុក/ក្រុង",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["province"],
-        props: {
-          apiEndpoint: "/api/address/districts",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសស្រុក...",
-          addressQueryParamKey: "province_code",
-          addressQueryParamSourceField: "province",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "commune",
-        label: "ឃុំ/សង្កាត់",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["district", "province"],
-        props: {
-          apiEndpoint: "/api/address/communes",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសឃុំ...",
-          addressQueryParamKey: "district_code",
-          addressQueryParamSourceField: "district",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "village",
-        label: "ភូមិ",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["commune", "district", "province"],
-        props: {
-          apiEndpoint: "/api/address/villages",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសភូមិ...",
-          addressQueryParamKey: "commune_code",
-          addressQueryParamSourceField: "commune",
-        },
-      },
-    ];
-  }
-  if (item.isDatePicker) {
-    return [
-      {
-        _id: uid(),
-        name: `field_${++_seq}`,
-        label: item.label,
-        component: "UCalendar",
-        type: "date",
-        placeholder: "Select date...",
-        colSpan: 12,
-        row: sectionFields.length + 1,
-      },
-    ];
-  }
-  if (item.isAsyncSelect) {
-    return [
-      {
-        _id: uid(),
-        name: `field_${++_seq}`,
-        label: item.label,
-        component: "UAsyncSelect",
-        type: "select",
-        placeholder: "Search...",
-        colSpan: 12,
-        row: sectionFields.length + 1,
-        props: {
-          apiEndpoint: "",
-          searchParam: "q",
-          debounce: 300,
-          minChars: 2,
-          placeholder: "Search...",
-          noResultsText: "No results found",
-          loadingText: "Loading...",
-        },
-      },
-    ];
-  }
-  if (item.isFileUpload) {
-    return [
-      {
-        _id: uid(),
-        name: `field_${++_seq}`,
-        label: item.label,
-        component: "UFileUpload",
-        colSpan: 12,
-        row: sectionFields.length + 1,
-        props: {
-          accept: "image/*",
-          multiple: false,
-        },
-      },
-    ];
-  }
-  return [
-    {
-      _id: uid(),
-      name: `field_${++_seq}`,
-      label: item.label,
-      component: item.component,
-      type: item.isFile
-        ? "file"
-        : (item.defaultProps?.type ??
-          (item.component === "UTextarea" ? "textarea" : "text")),
-      placeholder: item.isFile
-        ? undefined
-        : `Enter ${item.label.toLowerCase()}`,
-      colSpan: 12,
-      row: sectionFields.length + 1,
-      ...(item.defaultItems ? { items: item.defaultItems } : {}),
-      ...(item.defaultProps ? { props: item.defaultProps } : {}),
-    },
-  ];
-}
-
-function onDrop(sectionId: string, index: number, e: DragEvent) {
-  e.preventDefault();
-  dragOverSectionId.value = null;
-  dragOverIndex.value = null;
-
-  const targetSection = currentPage.value.sections.find(
-    (s) => s._id === sectionId,
-  );
-  if (!targetSection) return;
-
-  if (draggingFrom.value === "palette" && draggingPaletteItem.value) {
-    const newFields = makeField(
-      draggingPaletteItem.value,
-      targetSection.fields,
-    );
-    targetSection.fields.splice(index, 0, ...newFields);
-    selectedId.value = newFields[0]._id;
-    rightPanel.value = "field";
-  } else if (draggingFrom.value === "canvas" && draggingCanvasId.value) {
-    const srcSection = currentPage.value.sections.find(
-      (s) => s._id === draggingCanvasSectionId.value,
-    );
-    if (!srcSection) return;
-    const fromIdx = srcSection.fields.findIndex(
-      (f) => f._id === draggingCanvasId.value,
-    );
-    if (fromIdx < 0) return;
-    const [moved] = srcSection.fields.splice(fromIdx, 1);
-    const insertAt =
-      srcSection === targetSection && fromIdx < index ? index - 1 : index;
-    targetSection.fields.splice(insertAt, 0, moved);
-  }
-
-  draggingFrom.value = null;
-  draggingPaletteItem.value = null;
-  draggingCanvasId.value = null;
-  draggingCanvasSectionId.value = null;
-  recalcRows();
-}
-
-function recalcRows() {
-  for (const page of pages.value) {
-    for (const sec of page.sections) {
-      let row = 1;
-      let used = 0;
-      for (const field of sec.fields) {
-        const span = field.colSpan ?? 12;
-        if (used + span > 12) {
-          row++;
-          used = 0;
-        }
-        field.row = row;
-        used += span;
-      }
-    }
-  }
-}
-
-// Config panel — field editing
-
-function updateSelected(patch: Partial<CanvasField>) {
-  if (!selectedId.value) return;
+function updateSelectedRow(patch: Partial<CanvasRow>) {
+  if (!selectedRowId.value) return;
   for (const page of pages.value)
     for (const sec of page.sections) {
-      const f = sec.fields.find((f) => f._id === selectedId.value);
-      if (f) {
-        Object.assign(f, patch);
-        return;
-      }
+      const row = sec.rows.find((r) => r._id === selectedRowId.value);
+      if (row) { Object.assign(row, patch); return; }
     }
 }
 
-function removeField(id: string) {
-  const field =
-    selectedField.value ??
-    pages.value
-      .flatMap((p) => p.sections.flatMap((s) => s.fields))
-      .find((f) => f._id === id);
-  modal.openConfirm({
-    title: "Remove Field",
-    description: `"${field?.label || field?.name || "This field"}" will be removed.`,
-    icon: "i-heroicons-trash",
-    confirmLabel: "Remove",
-    onConfirm: () => {
-      for (const page of pages.value)
-        for (const sec of page.sections) {
-          const idx = sec.fields.findIndex((f) => f._id === id);
-          if (idx >= 0) {
-            sec.fields.splice(idx, 1);
-            break;
-          }
-        }
-      if (selectedId.value === id) {
-        selectedId.value = null;
-        rightPanel.value = null;
-      }
-      recalcRows();
-    },
-  });
+function addRow(sectionId: string) {
+  const section = currentPage.value.sections.find((s) => s._id === sectionId);
+  if (!section) return;
+  const row = newRow();
+  section.rows.push(row);
+  selectRow(row._id);
 }
 
-// validation rules
-const ruleTypeOptions = [
-  { label: "Min length", value: "min" },
-  { label: "Max length", value: "max" },
-  { label: "Email", value: "email" },
-  { label: "URL", value: "url" },
-  { label: "Regex pattern", value: "regex" },
-];
-const ruleNeedsValue = ["min", "max", "regex"];
-
-function addRule(field: CanvasField) {
-  updateSelected({
-    validation: [
-      ...(field.validation ?? []),
-      { type: "min" as const, value: 1, message: "This field is required" },
-    ],
-  });
-}
-function removeRule(field: CanvasField, idx: number) {
-  const rules = [...(field.validation ?? [])];
-  rules.splice(idx, 1);
-  updateSelected({ validation: rules });
-}
-function updateRule(
-  field: CanvasField,
-  idx: number,
-  patch: Partial<ValidationRule>,
-) {
-  const rules = [...(field.validation ?? [])] as ValidationRule[];
-  rules[idx] = { ...rules[idx], ...patch };
-  updateSelected({ validation: rules });
-}
-
-const supportsValidation = [
-  "UInput",
-  "UTextarea",
-  "UInputNumber",
-  "USelect",
-  "URadioGroup",
-  "USelectMenu",
-];
-const supportsRequiredMessage = ["UAddress", "UAsyncSelect", "UCalendar"];
-
-function getAddressRequiredMessage(field: CanvasField): string {
-  return field.validation?.[0]?.message ?? "";
-}
-function setAddressRequiredMessage(message: string) {
-  updateSelected({
-    validation: message.trim() ? [{ type: "required" as const, message }] : [],
-  });
-}
-
-const hasItems = ["USelect", "URadioGroup", "UCheckboxGroup", "USelectMenu"];
-
-function addItem(field: CanvasField) {
-  const items = [...(field.items ?? [])];
-  items.push({
-    label: `Option ${items.length + 1}`,
-    value: `opt${items.length + 1}`,
-  });
-  updateSelected({ items });
-}
-function removeItem(field: CanvasField, idx: number) {
-  const items = [...(field.items ?? [])];
-  items.splice(idx, 1);
-  updateSelected({ items });
-}
-function updateItem(
-  field: CanvasField,
-  idx: number,
-  key: "label" | "value",
-  val: string,
-) {
-  const items = [...(field.items ?? [])];
-  items[idx] = { ...items[idx], [key]: val };
-  updateSelected({ items });
-}
-
-const colSpanOptions = [
-  { label: "Full (12)", value: 12 },
-  { label: "Half (6)", value: 6 },
-  { label: "Third (4)", value: 4 },
-  { label: "Two-thirds (8)", value: 8 },
-  { label: "Quarter (3)", value: 3 },
-];
-
-// Serialise → JSONFormConfig
-
-function toJSONField(f: CanvasField): JSONField {
-  const { _id, _group, ...rest } = f;
-  return rest as JSONField;
-}
-
-function buildConfig(): JSONFormConfig {
-  const jsonPages = pages.value.map((page) => {
-    // collapse to flat fields only when it's a single plain unnamed section with no style set
-    const hasSingleUnnamedSection =
-      page.sections.length === 1 &&
-      !page.sections[0].description &&
-      !page.sections[0].icon &&
-      !page.sections[0].displayStyle;
-
-    if (hasSingleUnnamedSection) {
-      return {
-        id: page._id,
-        title: page.title,
-        description: page.description,
-        fields: page.sections[0].fields.map(toJSONField),
-      };
-    }
-
-    return {
-      id: page._id,
-      title: page.title,
-      description: page.description,
-      sections: page.sections.map(
-        (sec) =>
-          ({
-            id: sec._id,
-            title: sec.title,
-            description: sec.description,
-            icon: sec.icon,
-            displayStyle: sec.displayStyle,
-            fields: sec.fields.map(toJSONField),
-          }) as JSONSection,
-      ),
-    };
-  });
-
-  return {
-    id: formId.value,
-    title: formTitle.value,
-    pages: isMultiStep.value ? jsonPages : [jsonPages[0]],
+function removeRow(sectionId: string, rowId: string) {
+  const section = currentPage.value.sections.find((s) => s._id === sectionId);
+  if (!section) return;
+  const row = section.rows.find((r) => r._id === rowId);
+  if (!row) return;
+  const doRemove = () => {
+    section.rows = section.rows.filter((r) => r._id !== rowId);
+    if (selectedRowId.value === rowId) { selectedRowId.value = null; rightPanel.value = null; }
   };
+  if (row.fields.length > 0) {
+    modal.openConfirm({
+      title: "Remove Row",
+      description: `This row has ${row.fields.length} field(s) that will also be removed.`,
+      icon: "i-heroicons-trash",
+      confirmLabel: "Remove",
+      onConfirm: doRemove,
+    });
+  } else {
+    doRemove();
+  }
 }
 
-// Save / Load / Export / Preview
+// ── Drag & drop ────
 
-const { refresh } = useFormStorage();
-const showPreview = ref(false);
-const showLoad = ref(false);
-const previewConfig = ref<ReturnType<typeof interpretConfig> | null>(null);
-const previewKey = ref(0);
-
-function save() {
-  saveForm(buildConfig(), formTitle.value);
-  refresh();
-  toast.add({
-    title: "Saved!",
-    color: "success",
-    icon: "i-heroicons-check-circle",
-  });
-}
-
-function loadSaved(id: string) {
-  const entry = loadForm(id);
-  if (!entry) return;
-  formTitle.value = entry.config.title;
-  formId.value = entry.config.id;
-  isMultiStep.value = entry.config.pages.length > 1;
-
-  pages.value = entry.config.pages.map((jp) => ({
-    _id: jp.id,
-    title: jp.title,
-    description: jp.description,
-    sections: jp.sections
-      ? jp.sections.map((js) => ({
-          _id: js.id,
-          title: js.title ?? "Section",
-          description: js.description,
-          icon: js.icon,
-          displayStyle: js.displayStyle,
-          fields: js.fields.map((f) => ({ ...f, _id: uid() }) as CanvasField),
-        }))
-      : [
-          {
-            _id: uid(),
-            title: "Section 1",
-            fields: (jp.fields ?? []).map(
-              (f) => ({ ...f, _id: uid() }) as CanvasField,
-            ),
-          },
-        ],
-  }));
-
-  activePageIdx.value = 0;
-  activeSectionIdx.value = 0;
-  selectedId.value = null;
-  rightPanel.value = null;
-  showLoad.value = false;
-}
-
-function exportJson() {
-  const json = JSON.stringify(buildConfig(), null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${formId.value}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function openPreview() {
-  previewConfig.value = interpretConfig(buildConfig());
-  previewKey.value++;
-  showPreview.value = true;
-}
-
-onMounted(() => {
-  const id = route.query.load as string | undefined;
-  if (id) loadSaved(id);
+const dnd = useBuilderDragDrop({
+  pages, currentPage, activePageIdx, activeSectionIdx, selectedId, rightPanel, uid,
 });
+
+const {
+  draggingFrom, draggingCanvasId, dragOverSectionId, dragOverIndex,
+  draggingPageIdx, dragOverPageIdx,
+  onPageTabDragStart, onPageTabDragOver, onPageTabDrop, onPageTabDragEnd,
+  draggingSectionIdx, dragOverSectionTabIdx,
+  onSectionTabDragStart, onSectionTabDragOver, onSectionTabDrop, onSectionTabDragEnd,
+  draggingRowId, dragOverRowId,
+  onRowDragStart, onRowDragOver, onRowDrop, onRowDragEnd,
+  onPaletteDragStart, onCanvasDragStart, onDragOver, onDragLeave,
+  onDropToRow, onDropNewRow, onDrop,
+} = dnd;
+
+// ── Field editor ───
+
+const {
+  updateSelected,
+  removeField,
+  updateFullAddressSubField,
+  addRule, removeRule, updateRule,
+  getAddressRequiredMessage, setAddressRequiredMessage,
+  addItem, removeItem, updateItem,
+  addTableColumn, removeTableColumn, updateTableColumn,
+  addTableColOption, removeTableColOption, updateTableColOption,
+  addRepeaterField, removeRepeaterField, updateRepeaterField,
+  addRepeaterFieldOption, removeRepeaterFieldOption, updateRepeaterFieldOption,
+} = useFieldEditor({ pages, selectedId, selectedField, rightPanel, modal });
+
+// ── Persistence ────
+
+const {
+  savedForms, refresh, deleteForm,
+  showPreview, showLoad, previewConfig, previewKey,
+  save, loadSaved, exportJson, openPreview,
+} = useFormPersistence({ pages, formTitle, formId, isMultiStep, activePageIdx, activeSectionIdx, selectedId, rightPanel });
 </script>
 
 <template>
@@ -867,14 +321,28 @@ onMounted(() => {
           <button
             v-for="(page, pi) in pages"
             :key="page._id"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-            :class="
+            draggable="true"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
+            :class="[
               pi === activePageIdx
                 ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                : 'text-gray-500 hover:bg-gray-100'
-            "
+                : 'text-gray-500 hover:bg-gray-100 border border-transparent',
+              dragOverPageIdx === pi && draggingPageIdx !== pi
+                ? 'ring-2 ring-primary-400 ring-offset-1'
+                : '',
+              draggingPageIdx === pi ? 'opacity-40' : '',
+            ]"
             @click="setActivePage(pi)"
+            @dragstart="onPageTabDragStart(pi, $event)"
+            @dragover="onPageTabDragOver(pi, $event)"
+            @dragleave="dragOverPageIdx = null"
+            @drop="onPageTabDrop(pi, $event)"
+            @dragend="onPageTabDragEnd"
           >
+            <UIcon
+              name="i-heroicons-bars-2"
+              class="size-3.5 text-gray-300 shrink-0"
+            />
             <span>{{ page.title || `Step ${pi + 1}` }}</span>
             <UButton
               v-if="pages.length > 1"
@@ -907,14 +375,28 @@ onMounted(() => {
               <button
                 v-for="(sec, si) in currentPage.sections"
                 :key="sec._id"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border"
-                :class="
+                draggable="true"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-grab active:cursor-grabbing select-none"
+                :class="[
                   si === activeSectionIdx
                     ? 'bg-primary-50 text-primary-700 border-primary-200'
-                    : 'text-gray-500 border-gray-200 hover:bg-gray-50'
-                "
+                    : 'text-gray-500 border-gray-200 hover:bg-gray-50',
+                  dragOverSectionTabIdx === si && draggingSectionIdx !== si
+                    ? 'ring-2 ring-primary-400 ring-offset-1'
+                    : '',
+                  draggingSectionIdx === si ? 'opacity-40' : '',
+                ]"
                 @click="setActiveSection(si)"
+                @dragstart="onSectionTabDragStart(si, $event)"
+                @dragover="onSectionTabDragOver(si, $event)"
+                @dragleave="dragOverSectionTabIdx = null"
+                @drop="onSectionTabDrop(si, $event)"
+                @dragend="onSectionTabDragEnd"
               >
+                <UIcon
+                  name="i-heroicons-bars-2"
+                  class="size-3 text-gray-300 shrink-0"
+                />
                 <UIcon name="i-heroicons-rectangle-stack" class="size-3.5" />
                 {{ sec.title || `Section ${si + 1}` }}
                 <UButton
@@ -970,133 +452,121 @@ onMounted(() => {
                 />
               </div>
 
-              <!-- Drop zone -->
-              <div class="p-4">
-                <!-- Empty -->
+              <!-- Section body: rows -->
+              <div class="p-3 space-y-1">
+                <!-- Empty section -->
                 <div
-                  v-if="currentSection?.fields.length === 0"
-                  class="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center py-12 text-center"
-                  @dragover.prevent="
-                    dragOverSectionId = currentSection?._id ?? null;
-                    dragOverIndex = 0;
-                  "
+                  v-if="!currentSection?.rows.length"
+                  class="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center py-10 text-center"
+                  @dragover.prevent="dragOverSectionId = currentSection?._id ?? null; dragOverIndex = 0"
                   @dragleave="onDragLeave"
                   @drop.prevent="onDrop(currentSection!._id, 0, $event)"
                 >
-                  <UIcon
-                    name="i-heroicons-cursor-arrow-rays"
-                    class="size-8 text-gray-300 mb-2"
-                  />
-                  <p class="text-sm text-gray-400">Drag fields here</p>
+                  <UIcon name="i-heroicons-cursor-arrow-rays" class="size-8 text-gray-300 mb-2" />
+                  <p class="text-sm text-gray-400">Drag fields here to create a row</p>
                 </div>
 
-                <!-- Fields -->
-                <div v-else class="space-y-1">
-                  <template
-                    v-for="(field, fi) in currentSection?.fields ?? []"
-                    :key="field._id"
-                  >
-                    <!-- Drop indicator -->
-                    <div
-                      class="h-1.5 rounded-full transition-colors"
-                      :class="
-                        dragOverSectionId === currentSection?._id &&
-                        dragOverIndex === fi
-                          ? 'bg-primary-400'
-                          : 'bg-transparent'
-                      "
-                      @dragover.prevent="
-                        onDragOver(currentSection!._id, fi, $event)
-                      "
-                      @dragleave="onDragLeave"
-                      @drop.prevent="onDrop(currentSection!._id, fi, $event)"
-                    />
-                    <!-- Field row -->
-                    <div
-                      class="group flex items-center justify-between border rounded-xl px-4 py-3 cursor-pointer transition-all"
-                      :class="
-                        selectedId === field._id
-                          ? 'border-primary-400 bg-primary-50 shadow-sm'
-                          : 'border-gray-100 bg-white hover:border-gray-300'
-                      "
-                      draggable="true"
-                      @click="selectField(field._id)"
-                      @dragstart="
-                        onCanvasDragStart(
-                          field._id,
-                          currentSection!._id,
-                          $event,
-                        )
-                      "
-                      @dragover.prevent="
-                        onDragOver(currentSection!._id, fi, $event)
-                      "
-                      @dragleave="onDragLeave"
-                      @drop.prevent="onDrop(currentSection!._id, fi, $event)"
-                    >
-                      <div class="flex items-center gap-2.5 min-w-0">
-                        <UIcon
-                          name="i-heroicons-bars-2"
-                          class="size-4 text-gray-300 shrink-0 cursor-grab"
-                        />
-                        <div class="min-w-0">
-                          <p class="text-sm font-medium text-gray-800 truncate">
-                            {{ field.label || field.name }}
-                          </p>
-                          <p
-                            class="text-xs text-gray-400 flex items-center gap-1.5"
-                          >
-                            {{ field.component }}
-                            <UBadge
-                              v-if="field._group"
-                              color="primary"
-                              variant="subtle"
-                              size="xs"
-                              >{{ field._group }}</UBadge
-                            >
-                            <span v-if="field.required" class="text-red-400"
-                              >required</span
-                            >
-                          </p>
-                        </div>
-                      </div>
-                      <UButton
-                        size="xs"
-                        variant="ghost"
-                        color="error"
-                        icon="i-heroicons-trash"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        @click.stop="removeField(field._id)"
-                      />
-                    </div>
-                  </template>
-
-                  <!-- Tail drop indicator -->
+                <!-- Rows -->
+                <template v-else>
+                  <!-- Before-first-row drop zone -->
                   <div
                     class="h-1.5 rounded-full transition-colors"
-                    :class="
-                      dragOverSectionId === currentSection?._id &&
-                      dragOverIndex === currentSection?.fields.length
-                        ? 'bg-primary-400'
-                        : 'bg-transparent'
-                    "
-                    @dragover.prevent="
-                      onDragOver(
-                        currentSection!._id,
-                        currentSection!.fields.length,
-                        $event,
-                      )
-                    "
+                    :class="dragOverSectionId === currentSection?._id && dragOverIndex === 0 ? 'bg-primary-400' : 'bg-transparent'"
+                    @dragover.prevent="dragOverSectionId = currentSection!._id; dragOverIndex = 0"
                     @dragleave="onDragLeave"
-                    @drop.prevent="
-                      onDrop(
-                        currentSection!._id,
-                        currentSection!.fields.length,
-                        $event,
-                      )
-                    "
+                    @drop.prevent="onDropNewRow(currentSection!._id, 0, $event)"
                   />
-                </div>
+
+                  <template v-for="(row, ri) in currentSection?.rows ?? []" :key="row._id">
+                    <!-- Row block -->
+                    <div
+                      class="border rounded-xl overflow-hidden transition-all"
+                      :class="[
+                        selectedRowId === row._id ? 'border-primary-300 bg-primary-50/20' : 'border-gray-200 bg-gray-50/30',
+                        draggingRowId === row._id ? 'opacity-40' : '',
+                        dragOverRowId === row._id && draggingRowId !== row._id ? 'ring-2 ring-primary-400' : '',
+                      ]"
+                      @dragover.prevent="onRowDragOver(row._id, $event)"
+                      @dragleave="dragOverRowId = null"
+                      @drop.prevent="onRowDrop(currentSection!._id, ri, $event)"
+                    >
+                      <!-- Row header -->
+                      <div
+                        class="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 bg-white/70 cursor-pointer select-none group"
+                        draggable="true"
+                        @click.stop="selectRow(row._id)"
+                        @dragstart="onRowDragStart(row._id, currentSection!._id, $event)"
+                        @dragend="onRowDragEnd"
+                      >
+                        <UIcon name="i-heroicons-bars-2" class="size-4 text-gray-300 shrink-0 cursor-grab" />
+                        <UBadge size="xs" :color="row.layout === 'auto' ? 'neutral' : 'primary'" variant="subtle">
+                          {{ row.layout === 'auto' ? 'Auto' : row.layout === 'flex' ? 'Flex' : `Grid ${row.cols ?? 2}` }}
+                        </UBadge>
+                        <span class="text-xs text-gray-400 flex-1">{{ row.fields.length }} field{{ row.fields.length !== 1 ? 's' : '' }}</span>
+                        <UButton
+                          size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
+                          class="opacity-0 group-hover:opacity-100 transition-opacity"
+                          @click.stop="removeRow(currentSection!._id, row._id)"
+                        />
+                      </div>
+
+                      <!-- Fields inside row -->
+                      <div
+                        class="p-2 grid gap-1 min-h-10 group/row"
+                        style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))"
+                        @dragover.prevent="dragOverSectionId = currentSection!._id; dragOverIndex = row.fields.length; dragOverRowId = row._id"
+                        @dragleave="dragOverSectionId = null; dragOverIndex = null; dragOverRowId = null"
+                        @drop.prevent="onDropToRow(currentSection!._id, row._id, row.fields.length, $event)"
+                      >
+                        <div
+                          v-for="(field, fi) in row.fields"
+                          :key="field._id"
+                          class="group/field min-w-0 flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 cursor-pointer transition-all text-xs"
+                          :class="selectedId === field._id ? 'border-primary-400 bg-primary-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'"
+                          draggable="true"
+                          @click.stop="selectField(field._id)"
+                          @dragstart="onCanvasDragStart(field._id, currentSection!._id, $event)"
+                          @dragover.prevent.stop="dragOverSectionId = currentSection!._id; dragOverIndex = fi; dragOverRowId = row._id"
+                          @drop.prevent.stop="onDropToRow(currentSection!._id, row._id, fi, $event)"
+                        >
+                          <UIcon name="i-heroicons-bars-2" class="size-3 text-gray-300 shrink-0 cursor-grab" />
+                          <div class="min-w-0 flex-1">
+                            <p class="font-medium text-gray-800 truncate">{{ field.label || field.name }}</p>
+                            <p class="text-gray-400 flex items-center gap-1 truncate">
+                              {{ field.component }}
+                              <UBadge v-if="field._group" color="primary" variant="subtle" size="xs">{{ field._group }}</UBadge>
+                              <span v-if="field.required" class="text-red-400">req</span>
+                              <span v-if="duplicateNames.has(field.name)" class="text-orange-500 flex items-center gap-0.5">
+                                <UIcon name="i-heroicons-exclamation-triangle" class="size-3" />dup
+                              </span>
+                            </p>
+                          </div>
+                          <UButton
+                            size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
+                            class="opacity-0 group-hover/field:opacity-100 transition-opacity shrink-0"
+                            @click.stop="removeField(field._id)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Between-rows drop zone -->
+                    <div
+                      class="h-1.5 rounded-full transition-colors"
+                      :class="dragOverSectionId === currentSection?._id && dragOverIndex === ri + 1 && !dragOverRowId ? 'bg-primary-400' : 'bg-transparent'"
+                      @dragover.prevent="dragOverSectionId = currentSection!._id; dragOverIndex = ri + 1; dragOverRowId = null"
+                      @dragleave="onDragLeave"
+                      @drop.prevent="onDropNewRow(currentSection!._id, ri + 1, $event)"
+                    />
+                  </template>
+
+                  <!-- Add Row button -->
+                  <div class="pt-1">
+                    <UButton size="xs" variant="ghost" color="neutral" leading-icon="i-heroicons-plus" @click="addRow(currentSection!._id)">
+                      Add Row
+                    </UButton>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -1120,14 +590,14 @@ onMounted(() => {
           </p>
 
           <div
-            v-if="selectedField.component === 'UAddress'"
+            v-if="selectedField.component === 'UFullAddress'"
             class="flex items-start gap-2 rounded-lg bg-primary-50 border border-primary-200 px-3 py-2.5 text-xs text-primary-700"
           >
             <UIcon name="i-heroicons-map-pin" class="size-4 shrink-0 mt-0.5" />
             <div>
-              <p class="font-medium">Address Group Field</p>
+              <p class="font-medium">Full Address Field</p>
               <p class="text-primary-500 mt-0.5">
-                Part of a cascading address block. Rename the key if needed.
+                Configure each address level individually below.
               </p>
             </div>
           </div>
@@ -1147,6 +617,14 @@ onMounted(() => {
               size="sm"
               @update:model-value="updateSelected({ name: $event as string })"
             />
+            <p
+              v-if="duplicateNames.has(selectedField.name)"
+              class="text-xs text-orange-500 flex items-center gap-1 mt-1"
+            >
+              <UIcon name="i-heroicons-exclamation-triangle" class="size-3.5" />
+              Duplicate key — another field uses this name. Form values will
+              conflict.
+            </p>
           </UFormField>
           <UFormField label="Placeholder">
             <UInput
@@ -1164,13 +642,13 @@ onMounted(() => {
               :model-value="selectedField.colSpan ?? 12"
               :items="colSpanOptions"
               size="sm"
-              @update:model-value="
-                updateSelected({ colSpan: Number($event) });
-                recalcRows();
-              "
+              @update:model-value="updateSelected({ colSpan: Number($event) })"
             />
           </UFormField>
-          <div class="flex items-center justify-between">
+          <div
+            v-if="selectedField.component !== 'UFullAddress'"
+            class="flex items-center justify-between"
+          >
             <span class="text-sm text-gray-700">Required</span>
             <USwitch
               :model-value="selectedField.required ?? false"
@@ -1410,6 +888,376 @@ onMounted(() => {
             </div>
           </template>
 
+          <!-- Table columns config -->
+          <template v-if="selectedField.component === 'UTableField'">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-sm font-medium text-gray-700">Columns</p>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  leading-icon="i-heroicons-plus"
+                  type="button"
+                  @click="addTableColumn(selectedField)"
+                  >Add</UButton
+                >
+              </div>
+              <div class="space-y-3">
+                <div
+                  v-for="(col, ci) in selectedField.props?.columns ?? []"
+                  :key="ci"
+                  class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <UInput
+                      :model-value="col.label"
+                      placeholder="Label"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateTableColumn(selectedField, Number(ci), {
+                          label: $event as string,
+                        })
+                      "
+                    />
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="error"
+                      icon="i-heroicons-x-mark"
+                      type="button"
+                      @click="removeTableColumn(selectedField, Number(ci))"
+                    />
+                  </div>
+                  <div class="flex gap-1.5">
+                    <UInput
+                      :model-value="col.key"
+                      placeholder="key"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateTableColumn(selectedField, Number(ci), {
+                          key: $event as string,
+                        })
+                      "
+                    />
+                    <USelect
+                      :model-value="col.type"
+                      :items="colTypeOptions"
+                      size="xs"
+                      class="w-24"
+                      @update:model-value="
+                        updateTableColumn(selectedField, Number(ci), {
+                          type: $event as string,
+                        })
+                      "
+                    />
+                  </div>
+                  <!-- select column options -->
+                  <template v-if="col.type === 'select'">
+                    <div class="space-y-1.5 pl-1 border-l-2 border-gray-200">
+                      <div
+                        v-for="(opt, oi) in col.options ?? []"
+                        :key="oi"
+                        class="flex items-center gap-1"
+                      >
+                        <UInput
+                          :model-value="opt.label"
+                          placeholder="Label"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateTableColOption(
+                              selectedField,
+                              Number(ci),
+                              Number(oi),
+                              'label',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UInput
+                          :model-value="opt.value"
+                          placeholder="Value"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateTableColOption(
+                              selectedField,
+                              Number(ci),
+                              Number(oi),
+                              'value',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UButton
+                          size="xs"
+                          variant="ghost"
+                          color="error"
+                          icon="i-heroicons-x-mark"
+                          type="button"
+                          @click="removeTableColOption(selectedField, Number(ci), Number(oi))"
+                        />
+                      </div>
+                      <UButton
+                        size="xs"
+                        variant="ghost"
+                        leading-icon="i-heroicons-plus"
+                        type="button"
+                        @click="addTableColOption(selectedField, Number(ci))"
+                        >Option</UButton
+                      >
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- OTP length config -->
+          <template v-if="selectedField.component === 'UOtpInput'">
+            <UFormField label="PIN Length">
+              <UButtonGroup size="sm">
+                <UButton
+                  v-for="n in [4, 5, 6]"
+                  :key="n"
+                  type="button"
+                  :variant="
+                    (selectedField.props?.length ?? 6) === n
+                      ? 'solid'
+                      : 'outline'
+                  "
+                  :color="
+                    (selectedField.props?.length ?? 6) === n
+                      ? 'primary'
+                      : 'neutral'
+                  "
+                  @click="
+                    updateSelected({
+                      props: { ...selectedField.props, length: n },
+                    })
+                  "
+                  >{{ n }} digits</UButton
+                >
+              </UButtonGroup>
+            </UFormField>
+          </template>
+
+          <!-- Repeater sub-fields config -->
+          <template v-if="selectedField.component === 'URepeater'">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-sm font-medium text-gray-700">Sub-fields</p>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  leading-icon="i-heroicons-plus"
+                  type="button"
+                  @click="addRepeaterField(selectedField)"
+                  >Add</UButton
+                >
+              </div>
+              <div class="space-y-3">
+                <div
+                  v-for="(col, ci) in selectedField.props?.fields ?? []"
+                  :key="ci"
+                  class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <UInput
+                      :model-value="col.label"
+                      placeholder="Label"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, Number(ci), {
+                          label: $event as string,
+                        })
+                      "
+                    />
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="error"
+                      icon="i-heroicons-x-mark"
+                      type="button"
+                      @click="removeRepeaterField(selectedField, Number(ci))"
+                    />
+                  </div>
+                  <div class="flex gap-1.5">
+                    <UInput
+                      :model-value="col.key"
+                      placeholder="key"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, Number(ci), {
+                          key: $event as string,
+                        })
+                      "
+                    />
+                    <USelect
+                      :model-value="col.type"
+                      :items="colTypeOptions"
+                      size="xs"
+                      class="w-24"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, Number(ci), {
+                          type: $event as string,
+                        })
+                      "
+                    />
+                  </div>
+                  <template v-if="col.type === 'select'">
+                    <div class="space-y-1.5 pl-1 border-l-2 border-gray-200">
+                      <div
+                        v-for="(opt, oi) in col.options ?? []"
+                        :key="oi"
+                        class="flex items-center gap-1"
+                      >
+                        <UInput
+                          :model-value="opt.label"
+                          placeholder="Label"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateRepeaterFieldOption(
+                              selectedField,
+                              Number(ci),
+                              Number(oi),
+                              'label',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UInput
+                          :model-value="opt.value"
+                          placeholder="Value"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateRepeaterFieldOption(
+                              selectedField,
+                              Number(ci),
+                              Number(oi),
+                              'value',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UButton
+                          size="xs"
+                          variant="ghost"
+                          color="error"
+                          icon="i-heroicons-x-mark"
+                          type="button"
+                          @click="
+                            removeRepeaterFieldOption(selectedField, Number(ci), Number(oi))
+                          "
+                        />
+                      </div>
+                      <UButton
+                        size="xs"
+                        variant="ghost"
+                        leading-icon="i-heroicons-plus"
+                        type="button"
+                        @click="addRepeaterFieldOption(selectedField, Number(ci))"
+                        >Option</UButton
+                      >
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Full Address sub-fields config -->
+          <template v-if="selectedField.component === 'UFullAddress'">
+            <div class="space-y-3">
+              <p class="text-sm font-medium text-gray-700">Address Levels</p>
+              <div
+                v-for="level in ADDRESS_LEVELS"
+                :key="level"
+                class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
+              >
+                <p class="text-xs font-semibold text-gray-500">
+                  {{ addressLevelLabels[level] }}
+                </p>
+                <UFormField label="Label">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.label ?? ''
+                    "
+                    placeholder="Label"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        label: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="Placeholder">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.placeholder ?? ''
+                    "
+                    placeholder="Placeholder"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        placeholder: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="API Endpoint">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.apiEndpoint ?? ''
+                    "
+                    placeholder="/api/address/..."
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        apiEndpoint: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="Width">
+                  <USelect
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.colSpan ?? 6
+                    "
+                    :items="colSpanOptions"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        colSpan: Number($event),
+                      })
+                    "
+                  />
+                </UFormField>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-600">Required</span>
+                  <USwitch
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.required ?? false
+                    "
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        required: $event as boolean,
+                      })
+                    "
+                  />
+                </div>
+              </div>
+            </div>
+          </template>
+
           <UButton
             block
             variant="soft"
@@ -1453,18 +1301,30 @@ onMounted(() => {
             />
           </UFormField>
           <UFormField label="Display Style">
-            <USelect
-              :model-value="currentSection.displayStyle ?? 'card'"
-              :items="['card', 'collapse', 'plain']"
-              size="sm"
-              class="w-[70%]"
-              @update:model-value="
-                currentSection.displayStyle = $event as
-                  | 'card'
-                  | 'collapse'
-                  | 'plain'
-              "
-            />
+            <UButtonGroup size="sm">
+              <UButton
+                v-for="opt in sectionStyleOptions"
+                :key="opt.value"
+                type="button"
+                :variant="
+                  (currentSection.displayStyle ?? 'card') === opt.value
+                    ? 'solid'
+                    : 'outline'
+                "
+                :color="
+                  (currentSection.displayStyle ?? 'card') === opt.value
+                    ? 'primary'
+                    : 'neutral'
+                "
+                @click="
+                  currentSection.displayStyle = opt.value as
+                    | 'card'
+                    | 'collapse'
+                    | 'plain'
+                "
+                >{{ opt.label }}</UButton
+              >
+            </UButtonGroup>
           </UFormField>
         </div>
 

@@ -60,6 +60,15 @@ function fieldProps() {
       @update:model-value="value = $event"
     />
 
+    <!-- full address group -->
+    <BaseFullAddress
+      v-else-if="field.component === 'UFullAddress'"
+      :field="field"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
     <!-- cascading address -->
     <BaseAddress
       v-else-if="field.component === 'UAddress'"
@@ -85,6 +94,50 @@ function fieldProps() {
       v-model="value"
       :disabled="disabled"
       v-bind="{ ...field.props, ...field.attrs }"
+    />
+
+    <!-- tag input -->
+    <BaseTagInput
+      v-else-if="field.component === 'UTagInput'"
+      :model-value="value"
+      :placeholder="field.placeholder"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
+    <!-- date range -->
+    <BaseDateRange
+      v-else-if="field.component === 'UDateRange'"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
+    <!-- OTP / PIN -->
+    <BaseOtpInput
+      v-else-if="field.component === 'UOtpInput'"
+      :model-value="value"
+      :length="field.props?.length ?? 6"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
+    <!-- repeater group -->
+    <BaseRepeaterGroup
+      v-else-if="field.component === 'URepeater'"
+      :fields="field.props?.fields ?? []"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
+    <!-- table field -->
+    <BaseTableField
+      v-else-if="field.component === 'UTableField'"
+      :columns="field.props?.columns ?? []"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
     />
 
     <!-- image / avatar upload -->

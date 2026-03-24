@@ -93,6 +93,32 @@ function setActivePage(idx: number) {
   rightPanel.value = "page";
 }
 
+function duplicatePage(pi: number) {
+  const taken = new Set(
+    pages.value.flatMap((p) => p.sections.flatMap((s) => s.rows.flatMap((r) => r.fields.map((f) => f.name))))
+  );
+  const page = pages.value[pi];
+  const clone = {
+    ...page,
+    _id: uid(),
+    title: page.title + " (copy)",
+    sections: page.sections.map((sec) => ({
+      ...sec,
+      _id: uid(),
+      rows: sec.rows.map((row) => ({
+        ...row,
+        _id: uid(),
+        fields: row.fields.map((f) => ({ ...f, _id: uid(), name: _uniqueName(f.name, taken) })),
+      })),
+    })),
+  };
+  pages.value.splice(pi + 1, 0, clone);
+  activePageIdx.value = pi + 1;
+  activeSectionIdx.value = 0;
+  selectedId.value = null;
+  rightPanel.value = "page";
+}
+
 // ── Section management 
 
 function addSection() {
@@ -124,7 +150,55 @@ function setActiveSection(idx: number) {
   rightPanel.value = "section";
 }
 
-// ── Row management 
+function _uniqueName(base: string, taken: Set<string>): string {
+  let name = `${base}_2`;
+  let n = 2;
+  while (taken.has(name)) name = `${base}_${++n}`;
+  taken.add(name);
+  return name;
+}
+
+function duplicateSection(si: number) {
+  const taken = new Set(
+    pages.value.flatMap((p) => p.sections.flatMap((s) => s.rows.flatMap((r) => r.fields.map((f) => f.name))))
+  );
+  const sec = currentPage.value.sections[si];
+  const clone = {
+    ...sec,
+    _id: uid(),
+    title: sec.title + " (copy)",
+    rows: sec.rows.map((row) => ({
+      ...row,
+      _id: uid(),
+      fields: row.fields.map((f) => ({ ...f, _id: uid(), name: _uniqueName(f.name, taken) })),
+    })),
+  };
+  currentPage.value.sections.splice(si + 1, 0, clone);
+  activeSectionIdx.value = si + 1;
+  selectedId.value = null;
+  rightPanel.value = "section";
+}
+
+function duplicateField(fieldId: string) {
+  const taken = new Set(
+    pages.value.flatMap((p) => p.sections.flatMap((s) => s.rows.flatMap((r) => r.fields.map((f) => f.name))))
+  );
+  for (const page of pages.value)
+    for (const sec of page.sections)
+      for (const row of sec.rows) {
+        const idx = row.fields.findIndex((f) => f._id === fieldId);
+        if (idx >= 0) {
+          const src = row.fields[idx];
+          const clone = { ...src, _id: uid(), name: _uniqueName(src.name, taken) };
+          row.fields.splice(idx + 1, 0, clone);
+          selectedId.value = clone._id;
+          rightPanel.value = "field";
+          return;
+        }
+      }
+}
+
+// ── Row management
 
 const selectedRowId = ref<string | null>(null);
 
@@ -322,7 +396,7 @@ const {
             v-for="(page, pi) in pages"
             :key="page._id"
             draggable="true"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
+            class="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
             :class="[
               pi === activePageIdx
                 ? 'bg-primary-50 text-primary-700 border border-primary-200'
@@ -345,12 +419,20 @@ const {
             />
             <span>{{ page.title || `Step ${pi + 1}` }}</span>
             <UButton
+              size="xs"
+              variant="ghost"
+              color="neutral"
+              icon="i-heroicons-document-duplicate"
+              class="size-4 p-0 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              @click.stop="duplicatePage(pi)"
+            />
+            <UButton
               v-if="pages.length > 1"
               size="xs"
               variant="ghost"
               color="neutral"
               icon="i-heroicons-x-mark"
-              class="size-4 p-0 ml-1"
+              class="size-4 p-0"
               @click.stop="removePage(pi)"
             />
           </button>
@@ -369,14 +451,14 @@ const {
           class="flex-1 p-6 overflow-y-auto"
           style="scrollbar-width: none; scrollbar-color: #e5e7eb transparent"
         >
-          <div class="max-w-2xl mx-auto space-y-4">
+          <div class="max-w-4xl mx-auto space-y-4">
             <!-- Section tabs -->
             <div class="flex items-center gap-2 flex-wrap">
               <button
                 v-for="(sec, si) in currentPage.sections"
                 :key="sec._id"
                 draggable="true"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-grab active:cursor-grabbing select-none"
+                class="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-grab active:cursor-grabbing select-none"
                 :class="[
                   si === activeSectionIdx
                     ? 'bg-primary-50 text-primary-700 border-primary-200'
@@ -400,12 +482,20 @@ const {
                 <UIcon name="i-heroicons-rectangle-stack" class="size-3.5" />
                 {{ sec.title || `Section ${si + 1}` }}
                 <UButton
+                  size="xs"
+                  variant="ghost"
+                  color="neutral"
+                  icon="i-heroicons-document-duplicate"
+                  class="size-3.5 p-0 ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  @click.stop="duplicateSection(si)"
+                />
+                <UButton
                   v-if="currentPage.sections.length > 1"
                   size="xs"
                   variant="ghost"
                   color="neutral"
                   icon="i-heroicons-x-mark"
-                  class="size-3.5 p-0 ml-0.5"
+                  class="size-3.5 p-0"
                   @click.stop="removeSection(si)"
                 />
               </button>
@@ -457,7 +547,7 @@ const {
                 <!-- Empty section -->
                 <div
                   v-if="!currentSection?.rows.length"
-                  class="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center py-10 text-center"
+                  class="border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center py-40 text-center"
                   @dragover.prevent="dragOverSectionId = currentSection?._id ?? null; dragOverIndex = 0"
                   @dragleave="onDragLeave"
                   @drop.prevent="onDrop(currentSection!._id, 0, $event)"
@@ -542,6 +632,11 @@ const {
                             </p>
                           </div>
                           <UButton
+                            size="xs" variant="ghost" color="neutral" icon="i-heroicons-document-duplicate"
+                            class="opacity-0 group-hover/field:opacity-100 transition-opacity shrink-0"
+                            @click.stop="duplicateField(field._id)"
+                          />
+                          <UButton
                             size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
                             class="opacity-0 group-hover/field:opacity-100 transition-opacity shrink-0"
                             @click.stop="removeField(field._id)"
@@ -563,7 +658,8 @@ const {
                   <!-- Add Row button -->
                   <div class="pt-1">
                     <UButton size="xs" variant="ghost" color="neutral" leading-icon="i-heroicons-plus" @click="addRow(currentSection!._id)">
-                      Add Row
+                      <!-- Add Row -->
+                       Add Container
                     </UButton>
                   </div>
                 </template>

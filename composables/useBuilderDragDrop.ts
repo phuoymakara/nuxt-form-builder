@@ -15,7 +15,7 @@ export function useBuilderDragDrop(params: {
 }) {
   const { pages, currentPage, activePageIdx, activeSectionIdx, selectedId, rightPanel, uid } = params;
 
-  // ── Field drag state 
+  // Field drag state 
   const draggingFrom = ref<"palette" | "canvas" | null>(null);
   const draggingPaletteItem = ref<PaletteItem | null>(null);
   const draggingCanvasId = ref<string | null>(null);
@@ -23,7 +23,7 @@ export function useBuilderDragDrop(params: {
   const dragOverSectionId = ref<string | null>(null);
   const dragOverIndex = ref<number | null>(null);
 
-  // ── Page tab drag & drop
+  // Page tab drag & drop
   const draggingPageIdx = ref<number | null>(null);
   const dragOverPageIdx = ref<number | null>(null);
 
@@ -53,7 +53,7 @@ export function useBuilderDragDrop(params: {
     dragOverPageIdx.value = null;
   }
 
-  // ── Section tab drag & drop 
+  // Section tab drag & drop 
   const draggingSectionIdx = ref<number | null>(null);
   const dragOverSectionTabIdx = ref<number | null>(null);
 
@@ -83,7 +83,7 @@ export function useBuilderDragDrop(params: {
     dragOverSectionTabIdx.value = null;
   }
 
-  // ── Row reorder drag & drop 
+  // Row reorder drag & drop 
   const draggingRowId = ref<string | null>(null);
   const draggingRowSectionId = ref<string | null>(null);
   const dragOverRowId = ref<string | null>(null);
@@ -120,7 +120,7 @@ export function useBuilderDragDrop(params: {
     dragOverRowId.value = null;
   }
 
-  // ── Palette & canvas field drag 
+  // Palette & canvas field drag 
   function onPaletteDragStart(item: PaletteItem, e: DragEvent) {
     draggingFrom.value = "palette";
     draggingPaletteItem.value = item;

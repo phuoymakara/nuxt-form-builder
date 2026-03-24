@@ -2,7 +2,7 @@ import type { Ref, ComputedRef } from "vue";
 import type { ValidationRule } from "~/utils/form-schema";
 import type { CanvasField, CanvasPage } from "~/pages/builder/config";
 
-// ── Constants ────────
+//  Constants 
 
 export const ruleTypeOptions = [
   { label: "Min length", value: "min" },
@@ -59,7 +59,7 @@ export const addressLevelLabels: Record<string, string> = {
   village: "Village (ភូមិ)",
 };
 
-// ── Composable ───────
+//  Composable ─
 
 export function useFieldEditor(params: {
   pages: Ref<CanvasPage[]>;
@@ -106,7 +106,7 @@ export function useFieldEditor(params: {
     });
   }
 
-  // ── Full Address sub-field 
+  //  Full Address sub-field 
 
   function updateFullAddressSubField(field: CanvasField, level: string, patch: Record<string, any>) {
     const subFields = { ...(field.props?.subFields ?? {}) };
@@ -114,7 +114,7 @@ export function useFieldEditor(params: {
     updateSelected({ props: { ...field.props, subFields } });
   }
 
-  // ── Validation rules 
+  //  Validation rules 
 
   function addRule(field: CanvasField) {
     updateSelected({
@@ -143,7 +143,7 @@ export function useFieldEditor(params: {
     });
   }
 
-  // ── Select / Radio / Checkbox items 
+  //  Select / Radio / Checkbox items 
 
   function addItem(field: CanvasField) {
     const items = [...(field.items ?? [])];
@@ -161,7 +161,7 @@ export function useFieldEditor(params: {
     updateSelected({ items });
   }
 
-  // ── Table columns ───
+  //  Table columns ─
 
   function addTableColumn(field: CanvasField) {
     const cols = [...(field.props?.columns ?? [])];
@@ -201,7 +201,7 @@ export function useFieldEditor(params: {
     updateSelected({ props: { ...field.props, columns: cols } });
   }
 
-  // ── Repeater sub-fields 
+  //  Repeater sub-fields 
 
   function addRepeaterField(field: CanvasField) {
     const cols = [...(field.props?.fields ?? [])];

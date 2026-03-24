@@ -36,6 +36,14 @@ export interface TableColumn {
   options?: JSONOption[];
 }
 
+export interface JSONRow {
+  id: string;
+  layout: "auto" | "flex" | "grid";
+  cols?: 1 | 2 | 3 | 4;
+  gap?: "sm" | "md" | "lg";
+  fields: JSONField[];
+}
+
 export interface JSONField {
   name: string;
   label?: string;
@@ -59,7 +67,8 @@ export interface JSONSection {
   description?: string;
   icon?: string;
   displayStyle?: "card" | "collapse" | "plain";
-  fields: JSONField[];
+  rows?: JSONRow[];
+  fields?: JSONField[];
 }
 
 export interface JSONPage {
@@ -155,7 +164,7 @@ export function buildValidation(
     return schema;
   }
 
-  let schema: ZodType = component === "UInputNumber" ? z.number() : z.string();
+  let schema: ZodType = z.string();
 
   for (const rule of rules) {
     switch (rule.type) {
@@ -276,7 +285,17 @@ export function interpretConfig(json: JSONFormConfig): FormConfig {
         description: js.description,
         icon: js.icon,
         displayStyle: js.displayStyle,
-        fields: js.fields.map(interpretField),
+        ...(js.rows?.length
+          ? {
+              rows: js.rows.map((jr) => ({
+                id: jr.id,
+                layout: jr.layout,
+                cols: jr.cols,
+                gap: jr.gap,
+                fields: jr.fields.map(interpretField),
+              })),
+            }
+          : { fields: (js.fields ?? []).map(interpretField) }),
       })) as FormSection[];
     } else if (jp.fields) {
       page.fields = jp.fields.map(interpretField);

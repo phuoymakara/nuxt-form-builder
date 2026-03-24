@@ -4,6 +4,8 @@ definePageMeta({
   title: "ESB Form Builder",
 });
 
+import { useThemePicker, primaryColors, neutralColors, colorMap } from "~/composables/useThemePicker";
+const { appConfig, showThemePicker, setPrimary, setNeutral } = useThemePicker();
 const cards = [
   // {
   //   label: "V1",
@@ -181,5 +183,81 @@ const cards = [
         </p>
       </div>
     </UContainer>
+
+    <!-- Floating theme picker -->
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+      <!-- Color grid popup -->
+      <Transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="opacity-0 translate-y-2 scale-95"
+        enter-to-class="opacity-100 translate-y-0 scale-100"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="opacity-100 translate-y-0 scale-100"
+        leave-to-class="opacity-0 translate-y-2 scale-95"
+      >
+        <div
+          v-if="showThemePicker"
+          class="bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-56"
+        >
+          <!-- Primary -->
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-0.5">Primary</p>
+          <div class="grid grid-cols-6 gap-1.5 mb-1">
+            <button
+              v-for="color in primaryColors"
+              :key="color"
+              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none relative"
+              :style="{ backgroundColor: colorMap[color] }"
+              :title="color"
+              @click="setPrimary(color)"
+            >
+              <span
+                v-if="appConfig.ui.colors.primary === color"
+                class="absolute inset-0 rounded-full ring-2 ring-offset-2 ring-current"
+                :style="{ color: colorMap[color] }"
+              />
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5 px-0.5 mb-3">
+            <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: colorMap[appConfig.ui.colors.primary] }" />
+            <span class="text-xs text-gray-400 capitalize">{{ appConfig.ui.colors.primary }}</span>
+          </div>
+
+          <!-- Divider -->
+          <div class="border-t border-gray-100 mb-3" />
+
+          <!-- Neutral -->
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-0.5">Neutral</p>
+          <div class="flex gap-1.5 mb-1">
+            <button
+              v-for="color in neutralColors"
+              :key="color"
+              class="w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none relative"
+              :style="{ backgroundColor: colorMap[color] }"
+              :title="color"
+              @click="setNeutral(color)"
+            >
+              <span
+                v-if="appConfig.ui.colors.neutral === color"
+                class="absolute inset-0 rounded-full ring-2 ring-offset-2 ring-current"
+                :style="{ color: colorMap[color] }"
+              />
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5 px-0.5">
+            <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: colorMap[appConfig.ui.colors.neutral] }" />
+            <span class="text-xs text-gray-400 capitalize">{{ appConfig.ui.colors.neutral }}</span>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Toggle button -->
+      <button
+        class="w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 focus:outline-none"
+        :style="{ backgroundColor: colorMap[appConfig.ui.colors.primary] }"
+        @click="showThemePicker = !showThemePicker"
+      >
+        <UIcon name="i-heroicons-swatch" class="size-5 text-white" />
+      </button>
+    </div>
   </div>
 </template>

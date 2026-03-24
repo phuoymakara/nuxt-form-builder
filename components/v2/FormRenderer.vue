@@ -61,7 +61,11 @@ async function handleFieldChange(field: FieldWithConditions, newValue: any) {
   emit("change", field.name, newValue);
   // Re-validate just this field so its error clears immediately when value becomes valid
   if (formRef.value) {
-    try { await formRef.value.validate({ name: field.name, silent: true }); } catch { /* expected */ }
+    try {
+      await formRef.value.validate({ name: field.name, silent: true });
+    } catch {
+      /* expected */
+    }
   }
 }
 

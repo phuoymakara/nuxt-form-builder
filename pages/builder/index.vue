@@ -194,7 +194,7 @@ function newPage(title = "Step"): CanvasPage {
 const isMultiStep = ref(false);
 const formTitle = ref("My Form");
 const formId = ref(`form-${Date.now()}`);
-const pages = ref<CanvasPage[]>([newPage("Page 1")]);
+const pages = ref<CanvasPage[]>([newPage("Step 1")]);
 const activePageIdx = ref(0);
 const activeSectionIdx = ref(0);
 const selectedId = ref<string | null>(null); // selected field _id
@@ -314,6 +314,66 @@ const draggingCanvasSectionId = ref<string | null>(null);
 const dragOverSectionId = ref<string | null>(null);
 const dragOverIndex = ref<number | null>(null);
 
+// Page tab drag & drop
+const draggingPageIdx = ref<number | null>(null);
+const dragOverPageIdx = ref<number | null>(null);
+
+function onPageTabDragStart(idx: number, e: DragEvent) {
+  draggingPageIdx.value = idx;
+  e.dataTransfer!.effectAllowed = "move";
+  e.stopPropagation();
+}
+function onPageTabDragOver(idx: number, e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  dragOverPageIdx.value = idx;
+}
+function onPageTabDrop(idx: number, e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  const from = draggingPageIdx.value;
+  draggingPageIdx.value = null;
+  dragOverPageIdx.value = null;
+  if (from === null || from === idx) return;
+  const [page] = pages.value.splice(from, 1);
+  pages.value.splice(idx, 0, page);
+  activePageIdx.value = idx;
+}
+function onPageTabDragEnd() {
+  draggingPageIdx.value = null;
+  dragOverPageIdx.value = null;
+}
+
+// Section tab drag & drop
+const draggingSectionIdx = ref<number | null>(null);
+const dragOverSectionTabIdx = ref<number | null>(null);
+
+function onSectionTabDragStart(idx: number, e: DragEvent) {
+  draggingSectionIdx.value = idx;
+  e.dataTransfer!.effectAllowed = "move";
+  e.stopPropagation();
+}
+function onSectionTabDragOver(idx: number, e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  dragOverSectionTabIdx.value = idx;
+}
+function onSectionTabDrop(idx: number, e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  const from = draggingSectionIdx.value;
+  draggingSectionIdx.value = null;
+  dragOverSectionTabIdx.value = null;
+  if (from === null || from === idx) return;
+  const [section] = currentPage.value.sections.splice(from, 1);
+  currentPage.value.sections.splice(idx, 0, section);
+  activeSectionIdx.value = idx;
+}
+function onSectionTabDragEnd() {
+  draggingSectionIdx.value = null;
+  dragOverSectionTabIdx.value = null;
+}
+
 function onPaletteDragStart(item: PaletteItem, e: DragEvent) {
   draggingFrom.value = "palette";
   draggingPaletteItem.value = item;
@@ -346,79 +406,55 @@ function makeField(
     return [
       {
         _id: uid(),
-        _group: "Address",
-        name: "province",
-        label: "ខេត្ត/ក្រុង",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
+        name: `full_address_${++_seq}`,
+        label: "Full Address",
+        component: "UFullAddress",
+        type: "address",
+        colSpan: 12,
+        row: sectionFields.length + 1,
         props: {
-          apiEndpoint: "/api/address/provinces",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសខេត្ត...",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "district",
-        label: "ស្រុក/ក្រុង",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["province"],
-        props: {
-          apiEndpoint: "/api/address/districts",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសស្រុក...",
-          addressQueryParamKey: "province_code",
-          addressQueryParamSourceField: "province",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "commune",
-        label: "ឃុំ/សង្កាត់",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["district", "province"],
-        props: {
-          apiEndpoint: "/api/address/communes",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសឃុំ...",
-          addressQueryParamKey: "district_code",
-          addressQueryParamSourceField: "district",
-        },
-      },
-      {
-        _id: uid(),
-        _group: "Address",
-        name: "village",
-        label: "ភូមិ",
-        component: "UAddress",
-        type: "select",
-        colSpan: 6,
-        clearOnChange: true,
-        dependsOn: ["commune", "district", "province"],
-        props: {
-          apiEndpoint: "/api/address/villages",
-          searchable: true,
-          labelKey: "name_kh",
-          valueKey: "code",
-          placeholder: "ជ្រើសរើសភូមិ...",
-          addressQueryParamKey: "commune_code",
-          addressQueryParamSourceField: "commune",
+          subFields: {
+            province: {
+              label: "ខេត្ត/ក្រុង",
+              required: false,
+              colSpan: 6,
+              apiEndpoint: "/api/address/provinces",
+              labelKey: "name_kh",
+              valueKey: "code",
+              placeholder: "ជ្រើសរើសខេត្ត...",
+              searchable: true,
+            },
+            district: {
+              label: "ស្រុក/ក្រុង",
+              required: false,
+              colSpan: 6,
+              apiEndpoint: "/api/address/districts",
+              labelKey: "name_kh",
+              valueKey: "code",
+              placeholder: "ជ្រើសរើសស្រុក...",
+              searchable: true,
+            },
+            commune: {
+              label: "ឃុំ/សង្កាត់",
+              required: false,
+              colSpan: 6,
+              apiEndpoint: "/api/address/communes",
+              labelKey: "name_kh",
+              valueKey: "code",
+              placeholder: "ជ្រើសរើសឃុំ...",
+              searchable: true,
+            },
+            village: {
+              label: "ភូមិ",
+              required: false,
+              colSpan: 6,
+              apiEndpoint: "/api/address/villages",
+              labelKey: "name_kh",
+              valueKey: "code",
+              placeholder: "ជ្រើសរើសភូមិ...",
+              searchable: true,
+            },
+          },
         },
       },
     ];
@@ -477,31 +513,35 @@ function makeField(
     ];
   }
   if (item.isOtp) {
-    return [{
-      _id: uid(),
-      name: `field_${++_seq}`,
-      label: item.label,
-      component: "UOtpInput",
-      colSpan: 12,
-      row: sectionFields.length + 1,
-      props: { length: 6 },
-    }];
+    return [
+      {
+        _id: uid(),
+        name: `field_${++_seq}`,
+        label: item.label,
+        component: "UOtpInput",
+        colSpan: 12,
+        row: sectionFields.length + 1,
+        props: { length: 6 },
+      },
+    ];
   }
   if (item.isRepeater) {
-    return [{
-      _id: uid(),
-      name: `field_${++_seq}`,
-      label: item.label,
-      component: "URepeater",
-      colSpan: 12,
-      row: sectionFields.length + 1,
-      props: {
-        fields: [
-          { key: "field1", label: "Field 1", type: "text" },
-          { key: "field2", label: "Field 2", type: "text" },
-        ],
+    return [
+      {
+        _id: uid(),
+        name: `field_${++_seq}`,
+        label: item.label,
+        component: "URepeater",
+        colSpan: 12,
+        row: sectionFields.length + 1,
+        props: {
+          fields: [
+            { key: "field1", label: "Field 1", type: "text" },
+            { key: "field2", label: "Field 2", type: "text" },
+          ],
+        },
       },
-    }];
+    ];
   }
   if (item.isTable) {
     return [
@@ -546,6 +586,8 @@ function onDrop(sectionId: string, index: number, e: DragEvent) {
   e.preventDefault();
   dragOverSectionId.value = null;
   dragOverIndex.value = null;
+  if (draggingPageIdx.value !== null || draggingSectionIdx.value !== null)
+    return;
 
   const targetSection = currentPage.value.sections.find(
     (s) => s._id === sectionId,
@@ -612,6 +654,25 @@ function updateSelected(patch: Partial<CanvasField>) {
         return;
       }
     }
+}
+
+// Full Address sub-field config
+const ADDRESS_LEVELS = ["province", "district", "commune", "village"] as const;
+const addressLevelLabels: Record<string, string> = {
+  province: "Province (ខេត្ត/ក្រុង)",
+  district: "District (ស្រុក/ក្រុង)",
+  commune: "Commune (ឃុំ/សង្កាត់)",
+  village: "Village (ភូមិ)",
+};
+
+function updateFullAddressSubField(
+  field: CanvasField,
+  level: string,
+  patch: Record<string, any>,
+) {
+  const subFields = { ...(field.props?.subFields ?? {}) };
+  subFields[level] = { ...(subFields[level] ?? {}), ...patch };
+  updateSelected({ props: { ...field.props, subFields } });
 }
 
 function removeField(id: string) {
@@ -685,8 +746,12 @@ const supportsValidation = [
   "USelectMenu",
 ];
 const supportsRequiredMessage = [
-  "UAddress", "UAsyncSelect", "UCalendar",
-  "UTagInput", "UDateRange", "UOtpInput",
+  "UAddress",
+  "UAsyncSelect",
+  "UCalendar",
+  "UTagInput",
+  "UDateRange",
+  "UOtpInput",
 ];
 
 function getAddressRequiredMessage(field: CanvasField): string {
@@ -736,7 +801,11 @@ function removeTableColumn(field: CanvasField, idx: number) {
   cols.splice(idx, 1);
   updateSelected({ props: { ...field.props, columns: cols } });
 }
-function updateTableColumn(field: CanvasField, idx: number, patch: Record<string, any>) {
+function updateTableColumn(
+  field: CanvasField,
+  idx: number,
+  patch: Record<string, any>,
+) {
   const cols = [...(field.props?.columns ?? [])] as any[];
   cols[idx] = { ...cols[idx], ...patch };
   updateSelected({ props: { ...field.props, columns: cols } });
@@ -744,18 +813,31 @@ function updateTableColumn(field: CanvasField, idx: number, patch: Record<string
 function addTableColOption(field: CanvasField, colIdx: number) {
   const cols = [...(field.props?.columns ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
-  opts.push({ label: `Option ${opts.length + 1}`, value: `opt${opts.length + 1}` });
+  opts.push({
+    label: `Option ${opts.length + 1}`,
+    value: `opt${opts.length + 1}`,
+  });
   cols[colIdx] = { ...cols[colIdx], options: opts };
   updateSelected({ props: { ...field.props, columns: cols } });
 }
-function removeTableColOption(field: CanvasField, colIdx: number, optIdx: number) {
+function removeTableColOption(
+  field: CanvasField,
+  colIdx: number,
+  optIdx: number,
+) {
   const cols = [...(field.props?.columns ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
   opts.splice(optIdx, 1);
   cols[colIdx] = { ...cols[colIdx], options: opts };
   updateSelected({ props: { ...field.props, columns: cols } });
 }
-function updateTableColOption(field: CanvasField, colIdx: number, optIdx: number, key: "label" | "value", val: string) {
+function updateTableColOption(
+  field: CanvasField,
+  colIdx: number,
+  optIdx: number,
+  key: "label" | "value",
+  val: string,
+) {
   const cols = [...(field.props?.columns ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
   opts[optIdx] = { ...opts[optIdx], [key]: val };
@@ -775,7 +857,11 @@ function removeRepeaterField(field: CanvasField, idx: number) {
   cols.splice(idx, 1);
   updateSelected({ props: { ...field.props, fields: cols } });
 }
-function updateRepeaterField(field: CanvasField, idx: number, patch: Record<string, any>) {
+function updateRepeaterField(
+  field: CanvasField,
+  idx: number,
+  patch: Record<string, any>,
+) {
   const cols = [...(field.props?.fields ?? [])] as any[];
   cols[idx] = { ...cols[idx], ...patch };
   updateSelected({ props: { ...field.props, fields: cols } });
@@ -783,18 +869,31 @@ function updateRepeaterField(field: CanvasField, idx: number, patch: Record<stri
 function addRepeaterFieldOption(field: CanvasField, colIdx: number) {
   const cols = [...(field.props?.fields ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
-  opts.push({ label: `Option ${opts.length + 1}`, value: `opt${opts.length + 1}` });
+  opts.push({
+    label: `Option ${opts.length + 1}`,
+    value: `opt${opts.length + 1}`,
+  });
   cols[colIdx] = { ...cols[colIdx], options: opts };
   updateSelected({ props: { ...field.props, fields: cols } });
 }
-function removeRepeaterFieldOption(field: CanvasField, colIdx: number, optIdx: number) {
+function removeRepeaterFieldOption(
+  field: CanvasField,
+  colIdx: number,
+  optIdx: number,
+) {
   const cols = [...(field.props?.fields ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
   opts.splice(optIdx, 1);
   cols[colIdx] = { ...cols[colIdx], options: opts };
   updateSelected({ props: { ...field.props, fields: cols } });
 }
-function updateRepeaterFieldOption(field: CanvasField, colIdx: number, optIdx: number, key: "label" | "value", val: string) {
+function updateRepeaterFieldOption(
+  field: CanvasField,
+  colIdx: number,
+  optIdx: number,
+  key: "label" | "value",
+  val: string,
+) {
   const cols = [...(field.props?.fields ?? [])] as any[];
   const opts = [...(cols[colIdx].options ?? [])];
   opts[optIdx] = { ...opts[optIdx], [key]: val };
@@ -1049,14 +1148,28 @@ onMounted(() => {
           <button
             v-for="(page, pi) in pages"
             :key="page._id"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-            :class="
+            draggable="true"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-grab active:cursor-grabbing select-none"
+            :class="[
               pi === activePageIdx
                 ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                : 'text-gray-500 hover:bg-gray-100'
-            "
+                : 'text-gray-500 hover:bg-gray-100 border border-transparent',
+              dragOverPageIdx === pi && draggingPageIdx !== pi
+                ? 'ring-2 ring-primary-400 ring-offset-1'
+                : '',
+              draggingPageIdx === pi ? 'opacity-40' : '',
+            ]"
             @click="setActivePage(pi)"
+            @dragstart="onPageTabDragStart(pi, $event)"
+            @dragover="onPageTabDragOver(pi, $event)"
+            @dragleave="dragOverPageIdx = null"
+            @drop="onPageTabDrop(pi, $event)"
+            @dragend="onPageTabDragEnd"
           >
+            <UIcon
+              name="i-heroicons-bars-2"
+              class="size-3.5 text-gray-300 shrink-0"
+            />
             <span>{{ page.title || `Step ${pi + 1}` }}</span>
             <UButton
               v-if="pages.length > 1"
@@ -1089,14 +1202,28 @@ onMounted(() => {
               <button
                 v-for="(sec, si) in currentPage.sections"
                 :key="sec._id"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border"
-                :class="
+                draggable="true"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-grab active:cursor-grabbing select-none"
+                :class="[
                   si === activeSectionIdx
                     ? 'bg-primary-50 text-primary-700 border-primary-200'
-                    : 'text-gray-500 border-gray-200 hover:bg-gray-50'
-                "
+                    : 'text-gray-500 border-gray-200 hover:bg-gray-50',
+                  dragOverSectionTabIdx === si && draggingSectionIdx !== si
+                    ? 'ring-2 ring-primary-400 ring-offset-1'
+                    : '',
+                  draggingSectionIdx === si ? 'opacity-40' : '',
+                ]"
                 @click="setActiveSection(si)"
+                @dragstart="onSectionTabDragStart(si, $event)"
+                @dragover="onSectionTabDragOver(si, $event)"
+                @dragleave="dragOverSectionTabIdx = null"
+                @drop="onSectionTabDrop(si, $event)"
+                @dragend="onSectionTabDragEnd"
               >
+                <UIcon
+                  name="i-heroicons-bars-2"
+                  class="size-3 text-gray-300 shrink-0"
+                />
                 <UIcon name="i-heroicons-rectangle-stack" class="size-3.5" />
                 {{ sec.title || `Section ${si + 1}` }}
                 <UButton
@@ -1243,7 +1370,10 @@ onMounted(() => {
                               v-if="duplicateNames.has(field.name)"
                               class="text-orange-500 font-medium flex items-center gap-0.5"
                             >
-                              <UIcon name="i-heroicons-exclamation-triangle" class="size-3" />
+                              <UIcon
+                                name="i-heroicons-exclamation-triangle"
+                                class="size-3"
+                              />
                               duplicate key
                             </span>
                           </p>
@@ -1309,14 +1439,14 @@ onMounted(() => {
           </p>
 
           <div
-            v-if="selectedField.component === 'UAddress'"
+            v-if="selectedField.component === 'UFullAddress'"
             class="flex items-start gap-2 rounded-lg bg-primary-50 border border-primary-200 px-3 py-2.5 text-xs text-primary-700"
           >
             <UIcon name="i-heroicons-map-pin" class="size-4 shrink-0 mt-0.5" />
             <div>
-              <p class="font-medium">Address Group Field</p>
+              <p class="font-medium">Full Address Field</p>
               <p class="text-primary-500 mt-0.5">
-                Part of a cascading address block. Rename the key if needed.
+                Configure each address level individually below.
               </p>
             </div>
           </div>
@@ -1341,7 +1471,8 @@ onMounted(() => {
               class="text-xs text-orange-500 flex items-center gap-1 mt-1"
             >
               <UIcon name="i-heroicons-exclamation-triangle" class="size-3.5" />
-              Duplicate key — another field uses this name. Form values will conflict.
+              Duplicate key — another field uses this name. Form values will
+              conflict.
             </p>
           </UFormField>
           <UFormField label="Placeholder">
@@ -1366,7 +1497,10 @@ onMounted(() => {
               "
             />
           </UFormField>
-          <div class="flex items-center justify-between">
+          <div
+            v-if="selectedField.component !== 'UFullAddress'"
+            class="flex items-center justify-between"
+          >
             <span class="text-sm text-gray-700">Required</span>
             <USwitch
               :model-value="selectedField.required ?? false"
@@ -1617,11 +1751,12 @@ onMounted(() => {
                   leading-icon="i-heroicons-plus"
                   type="button"
                   @click="addTableColumn(selectedField)"
-                >Add</UButton>
+                  >Add</UButton
+                >
               </div>
               <div class="space-y-3">
                 <div
-                  v-for="(col, ci) in (selectedField.props?.columns ?? [])"
+                  v-for="(col, ci) in selectedField.props?.columns ?? []"
                   :key="ci"
                   class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
                 >
@@ -1631,7 +1766,11 @@ onMounted(() => {
                       placeholder="Label"
                       size="xs"
                       class="flex-1"
-                      @update:model-value="updateTableColumn(selectedField, ci, { label: $event as string })"
+                      @update:model-value="
+                        updateTableColumn(selectedField, ci, {
+                          label: $event as string,
+                        })
+                      "
                     />
                     <UButton
                       size="xs"
@@ -1648,21 +1787,29 @@ onMounted(() => {
                       placeholder="key"
                       size="xs"
                       class="flex-1"
-                      @update:model-value="updateTableColumn(selectedField, ci, { key: $event as string })"
+                      @update:model-value="
+                        updateTableColumn(selectedField, ci, {
+                          key: $event as string,
+                        })
+                      "
                     />
                     <USelect
                       :model-value="col.type"
                       :items="colTypeOptions"
                       size="xs"
                       class="w-24"
-                      @update:model-value="updateTableColumn(selectedField, ci, { type: $event as string })"
+                      @update:model-value="
+                        updateTableColumn(selectedField, ci, {
+                          type: $event as string,
+                        })
+                      "
                     />
                   </div>
                   <!-- select column options -->
                   <template v-if="col.type === 'select'">
                     <div class="space-y-1.5 pl-1 border-l-2 border-gray-200">
                       <div
-                        v-for="(opt, oi) in (col.options ?? [])"
+                        v-for="(opt, oi) in col.options ?? []"
                         :key="oi"
                         class="flex items-center gap-1"
                       >
@@ -1671,14 +1818,30 @@ onMounted(() => {
                           placeholder="Label"
                           size="xs"
                           class="flex-1"
-                          @update:model-value="updateTableColOption(selectedField, ci, oi, 'label', $event as string)"
+                          @update:model-value="
+                            updateTableColOption(
+                              selectedField,
+                              ci,
+                              oi,
+                              'label',
+                              $event as string,
+                            )
+                          "
                         />
                         <UInput
                           :model-value="opt.value"
                           placeholder="Value"
                           size="xs"
                           class="flex-1"
-                          @update:model-value="updateTableColOption(selectedField, ci, oi, 'value', $event as string)"
+                          @update:model-value="
+                            updateTableColOption(
+                              selectedField,
+                              ci,
+                              oi,
+                              'value',
+                              $event as string,
+                            )
+                          "
                         />
                         <UButton
                           size="xs"
@@ -1695,7 +1858,8 @@ onMounted(() => {
                         leading-icon="i-heroicons-plus"
                         type="button"
                         @click="addTableColOption(selectedField, ci)"
-                      >Option</UButton>
+                        >Option</UButton
+                      >
                     </div>
                   </template>
                 </div>
@@ -1711,10 +1875,23 @@ onMounted(() => {
                   v-for="n in [4, 5, 6]"
                   :key="n"
                   type="button"
-                  :variant="(selectedField.props?.length ?? 6) === n ? 'solid' : 'outline'"
-                  :color="(selectedField.props?.length ?? 6) === n ? 'primary' : 'neutral'"
-                  @click="updateSelected({ props: { ...selectedField.props, length: n } })"
-                >{{ n }} digits</UButton>
+                  :variant="
+                    (selectedField.props?.length ?? 6) === n
+                      ? 'solid'
+                      : 'outline'
+                  "
+                  :color="
+                    (selectedField.props?.length ?? 6) === n
+                      ? 'primary'
+                      : 'neutral'
+                  "
+                  @click="
+                    updateSelected({
+                      props: { ...selectedField.props, length: n },
+                    })
+                  "
+                  >{{ n }} digits</UButton
+                >
               </UButtonGroup>
             </UFormField>
           </template>
@@ -1724,40 +1901,210 @@ onMounted(() => {
             <div>
               <div class="flex items-center justify-between mb-2">
                 <p class="text-sm font-medium text-gray-700">Sub-fields</p>
-                <UButton size="xs" variant="ghost" leading-icon="i-heroicons-plus" type="button" @click="addRepeaterField(selectedField)">Add</UButton>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  leading-icon="i-heroicons-plus"
+                  type="button"
+                  @click="addRepeaterField(selectedField)"
+                  >Add</UButton
+                >
               </div>
               <div class="space-y-3">
                 <div
-                  v-for="(col, ci) in (selectedField.props?.fields ?? [])"
+                  v-for="(col, ci) in selectedField.props?.fields ?? []"
                   :key="ci"
                   class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
                 >
                   <div class="flex items-center gap-1.5">
-                    <UInput :model-value="col.label" placeholder="Label" size="xs" class="flex-1"
-                      @update:model-value="updateRepeaterField(selectedField, ci, { label: $event as string })" />
-                    <UButton size="xs" variant="ghost" color="error" icon="i-heroicons-x-mark" type="button"
-                      @click="removeRepeaterField(selectedField, ci)" />
+                    <UInput
+                      :model-value="col.label"
+                      placeholder="Label"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, ci, {
+                          label: $event as string,
+                        })
+                      "
+                    />
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="error"
+                      icon="i-heroicons-x-mark"
+                      type="button"
+                      @click="removeRepeaterField(selectedField, ci)"
+                    />
                   </div>
                   <div class="flex gap-1.5">
-                    <UInput :model-value="col.key" placeholder="key" size="xs" class="flex-1"
-                      @update:model-value="updateRepeaterField(selectedField, ci, { key: $event as string })" />
-                    <USelect :model-value="col.type" :items="colTypeOptions" size="xs" class="w-24"
-                      @update:model-value="updateRepeaterField(selectedField, ci, { type: $event as string })" />
+                    <UInput
+                      :model-value="col.key"
+                      placeholder="key"
+                      size="xs"
+                      class="flex-1"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, ci, {
+                          key: $event as string,
+                        })
+                      "
+                    />
+                    <USelect
+                      :model-value="col.type"
+                      :items="colTypeOptions"
+                      size="xs"
+                      class="w-24"
+                      @update:model-value="
+                        updateRepeaterField(selectedField, ci, {
+                          type: $event as string,
+                        })
+                      "
+                    />
                   </div>
                   <template v-if="col.type === 'select'">
                     <div class="space-y-1.5 pl-1 border-l-2 border-gray-200">
-                      <div v-for="(opt, oi) in (col.options ?? [])" :key="oi" class="flex items-center gap-1">
-                        <UInput :model-value="opt.label" placeholder="Label" size="xs" class="flex-1"
-                          @update:model-value="updateRepeaterFieldOption(selectedField, ci, oi, 'label', $event as string)" />
-                        <UInput :model-value="opt.value" placeholder="Value" size="xs" class="flex-1"
-                          @update:model-value="updateRepeaterFieldOption(selectedField, ci, oi, 'value', $event as string)" />
-                        <UButton size="xs" variant="ghost" color="error" icon="i-heroicons-x-mark" type="button"
-                          @click="removeRepeaterFieldOption(selectedField, ci, oi)" />
+                      <div
+                        v-for="(opt, oi) in col.options ?? []"
+                        :key="oi"
+                        class="flex items-center gap-1"
+                      >
+                        <UInput
+                          :model-value="opt.label"
+                          placeholder="Label"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateRepeaterFieldOption(
+                              selectedField,
+                              ci,
+                              oi,
+                              'label',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UInput
+                          :model-value="opt.value"
+                          placeholder="Value"
+                          size="xs"
+                          class="flex-1"
+                          @update:model-value="
+                            updateRepeaterFieldOption(
+                              selectedField,
+                              ci,
+                              oi,
+                              'value',
+                              $event as string,
+                            )
+                          "
+                        />
+                        <UButton
+                          size="xs"
+                          variant="ghost"
+                          color="error"
+                          icon="i-heroicons-x-mark"
+                          type="button"
+                          @click="
+                            removeRepeaterFieldOption(selectedField, ci, oi)
+                          "
+                        />
                       </div>
-                      <UButton size="xs" variant="ghost" leading-icon="i-heroicons-plus" type="button"
-                        @click="addRepeaterFieldOption(selectedField, ci)">Option</UButton>
+                      <UButton
+                        size="xs"
+                        variant="ghost"
+                        leading-icon="i-heroicons-plus"
+                        type="button"
+                        @click="addRepeaterFieldOption(selectedField, ci)"
+                        >Option</UButton
+                      >
                     </div>
                   </template>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Full Address sub-fields config -->
+          <template v-if="selectedField.component === 'UFullAddress'">
+            <div class="space-y-3">
+              <p class="text-sm font-medium text-gray-700">Address Levels</p>
+              <div
+                v-for="level in ADDRESS_LEVELS"
+                :key="level"
+                class="rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-2"
+              >
+                <p class="text-xs font-semibold text-gray-500">
+                  {{ addressLevelLabels[level] }}
+                </p>
+                <UFormField label="Label">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.label ?? ''
+                    "
+                    placeholder="Label"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        label: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="Placeholder">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.placeholder ?? ''
+                    "
+                    placeholder="Placeholder"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        placeholder: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="API Endpoint">
+                  <UInput
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.apiEndpoint ?? ''
+                    "
+                    placeholder="/api/address/..."
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        apiEndpoint: $event as string,
+                      })
+                    "
+                  />
+                </UFormField>
+                <UFormField label="Width">
+                  <USelect
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.colSpan ?? 6
+                    "
+                    :items="colSpanOptions"
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        colSpan: Number($event),
+                      })
+                    "
+                  />
+                </UFormField>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-600">Required</span>
+                  <USwitch
+                    :model-value="
+                      selectedField.props?.subFields?.[level]?.required ?? false
+                    "
+                    size="xs"
+                    @update:model-value="
+                      updateFullAddressSubField(selectedField, level, {
+                        required: $event as boolean,
+                      })
+                    "
+                  />
                 </div>
               </div>
             </div>
@@ -1811,10 +2158,24 @@ onMounted(() => {
                 v-for="opt in sectionStyleOptions"
                 :key="opt.value"
                 type="button"
-                :variant="(currentSection.displayStyle ?? 'card') === opt.value ? 'solid' : 'outline'"
-                :color="(currentSection.displayStyle ?? 'card') === opt.value ? 'primary' : 'neutral'"
-                @click="currentSection.displayStyle = (opt.value as 'card' | 'collapse' | 'plain')"
-              >{{ opt.label }}</UButton>
+                :variant="
+                  (currentSection.displayStyle ?? 'card') === opt.value
+                    ? 'solid'
+                    : 'outline'
+                "
+                :color="
+                  (currentSection.displayStyle ?? 'card') === opt.value
+                    ? 'primary'
+                    : 'neutral'
+                "
+                @click="
+                  currentSection.displayStyle = opt.value as
+                    | 'card'
+                    | 'collapse'
+                    | 'plain'
+                "
+                >{{ opt.label }}</UButton
+              >
             </UButtonGroup>
           </UFormField>
         </div>

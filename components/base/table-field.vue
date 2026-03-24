@@ -24,11 +24,14 @@ const emit = defineEmits<{
   "update:modelValue": [value: Record<string, any>[]];
 }>();
 
-const rows = computed(() => Array.isArray(props.modelValue) ? props.modelValue : []);
+const rows = computed(() =>
+  Array.isArray(props.modelValue) ? props.modelValue : [],
+);
 
 function newRow(): Record<string, any> {
   const row: Record<string, any> = {};
-  for (const col of props.columns) row[col.key] = col.type === "number" ? null : "";
+  for (const col of props.columns)
+    row[col.key] = col.type === "number" ? null : "";
   return row;
 }
 
@@ -43,7 +46,9 @@ function removeRow(idx: number) {
 }
 
 function updateCell(rowIdx: number, key: string, val: any) {
-  const next = rows.value.map((r, i) => (i === rowIdx ? { ...r, [key]: val } : r));
+  const next = rows.value.map((r, i) =>
+    i === rowIdx ? { ...r, [key]: val } : r,
+  );
   emit("update:modelValue", next);
 }
 </script>

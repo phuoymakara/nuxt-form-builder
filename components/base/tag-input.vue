@@ -15,12 +15,17 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{ "update:modelValue": [value: string[]] }>();
 
-const tags = computed(() => Array.isArray(props.modelValue) ? props.modelValue : []);
+const tags = computed(() =>
+  Array.isArray(props.modelValue) ? props.modelValue : [],
+);
 const inputValue = ref("");
 
 function addTag() {
   const val = inputValue.value.trim();
-  if (!val || tags.value.includes(val)) { inputValue.value = ""; return; }
+  if (!val || tags.value.includes(val)) {
+    inputValue.value = "";
+    return;
+  }
   emit("update:modelValue", [...tags.value, val]);
   inputValue.value = "";
 }
@@ -32,8 +37,10 @@ function removeTag(idx: number) {
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); }
-  else if (e.key === "Backspace" && !inputValue.value && tags.value.length) {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    addTag();
+  } else if (e.key === "Backspace" && !inputValue.value && tags.value.length) {
     removeTag(tags.value.length - 1);
   }
 }
@@ -56,7 +63,9 @@ function onKeydown(e: KeyboardEvent) {
         type="button"
         class="text-primary-400 hover:text-primary-700 leading-none ml-0.5"
         @click.stop="removeTag(i)"
-      >&times;</button>
+      >
+        &times;
+      </button>
     </span>
     <input
       v-if="!disabled"
@@ -65,6 +74,8 @@ function onKeydown(e: KeyboardEvent) {
       class="flex-1 min-w-24 outline-none text-sm bg-transparent"
       @keydown="onKeydown"
     />
-    <span v-else-if="tags.length === 0" class="text-sm text-gray-400">{{ placeholder }}</span>
+    <span v-else-if="tags.length === 0" class="text-sm text-gray-400">{{
+      placeholder
+    }}</span>
   </div>
 </template>

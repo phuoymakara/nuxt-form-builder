@@ -117,7 +117,12 @@ export function evalCondition(
 
 // Zod schema builder from ValidationRule[]
 
-const OBJECT_VALUE_COMPONENTS = ["UAddress", "UAsyncSelect", "UDateRange"];
+const OBJECT_VALUE_COMPONENTS = [
+  "UAddress",
+  "UAsyncSelect",
+  "UDateRange",
+  "UFullAddress",
+];
 const ARRAY_VALUE_COMPONENTS = ["UCheckboxGroup", "UCheckbox", "UTagInput"];
 const TABLE_COMPONENTS = ["UTableField", "URepeater"];
 
@@ -236,7 +241,11 @@ function interpretField(jf: JSONField): FieldWithConditions {
       "UAsyncSelect",
       "UDateRange",
     ].includes(jf.component);
-    const usesArrayValue = ["UCheckboxGroup", "UCheckbox", "UTagInput"].includes(jf.component);
+    const usesArrayValue = [
+      "UCheckboxGroup",
+      "UCheckbox",
+      "UTagInput",
+    ].includes(jf.component);
     const usesTableValue = TABLE_COMPONENTS.includes(jf.component);
     field.validation = usesObjectValue
       ? z.any().refine((v) => v !== null && v !== undefined, { message: msg })

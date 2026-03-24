@@ -21,9 +21,13 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
 });
 
-const emit = defineEmits<{ "update:modelValue": [value: Record<string, any>[]] }>();
+const emit = defineEmits<{
+  "update:modelValue": [value: Record<string, any>[]];
+}>();
 
-const rows = computed(() => Array.isArray(props.modelValue) ? props.modelValue : []);
+const rows = computed(() =>
+  Array.isArray(props.modelValue) ? props.modelValue : [],
+);
 
 function newRow(): Record<string, any> {
   const row: Record<string, any> = {};
@@ -42,7 +46,9 @@ function removeRow(idx: number) {
 }
 
 function updateCell(rowIdx: number, key: string, val: any) {
-  const next = rows.value.map((r, i) => (i === rowIdx ? { ...r, [key]: val } : r));
+  const next = rows.value.map((r, i) =>
+    i === rowIdx ? { ...r, [key]: val } : r,
+  );
   emit("update:modelValue", next);
 }
 </script>
@@ -54,8 +60,13 @@ function updateCell(rowIdx: number, key: string, val: any) {
       v-if="rows.length === 0"
       class="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center"
     >
-      <UIcon name="i-heroicons-queue-list" class="size-7 text-gray-300 mb-2 mx-auto" />
-      <p class="text-sm text-gray-400">No entries yet — click "Add Entry" below.</p>
+      <UIcon
+        name="i-heroicons-queue-list"
+        class="size-7 text-gray-300 mb-2 mx-auto"
+      />
+      <p class="text-sm text-gray-400">
+        No entries yet — click "Add Entry" below.
+      </p>
     </div>
 
     <!-- Rows -->
@@ -65,8 +76,13 @@ function updateCell(rowIdx: number, key: string, val: any) {
       class="rounded-xl border border-gray-200 bg-white shadow-xs"
     >
       <!-- Row header -->
-      <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50 rounded-t-xl">
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Entry {{ ri + 1 }}</span>
+      <div
+        class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50 rounded-t-xl"
+      >
+        <span
+          class="text-xs font-semibold text-gray-400 uppercase tracking-wide"
+          >Entry {{ ri + 1 }}</span
+        >
         <UButton
           v-if="!disabled"
           size="xs"
@@ -86,7 +102,8 @@ function updateCell(rowIdx: number, key: string, val: any) {
           class="col-span-12 sm:col-span-6"
         >
           <label class="block text-xs font-medium text-gray-600 mb-1">
-            {{ field.label }}<span v-if="field.required" class="text-red-400 ml-0.5">*</span>
+            {{ field.label
+            }}<span v-if="field.required" class="text-red-400 ml-0.5">*</span>
           </label>
           <USelect
             v-if="field.type === 'select'"

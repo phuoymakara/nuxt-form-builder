@@ -22,14 +22,20 @@ watch(
   () => props.modelValue,
   (val) => {
     const chars = (val ?? "").split("");
-    digits.value = Array(props.length).fill("").map((_, i) => chars[i] ?? "");
+    digits.value = Array(props.length)
+      .fill("")
+      .map((_, i) => chars[i] ?? "");
   },
   { immediate: true },
 );
 
 watch(
   () => props.length,
-  (n) => { digits.value = Array(n).fill("").map((_, i) => digits.value[i] ?? ""); },
+  (n) => {
+    digits.value = Array(n)
+      .fill("")
+      .map((_, i) => digits.value[i] ?? "");
+  },
 );
 
 function setRef(el: any, i: number) {
@@ -62,8 +68,12 @@ function onKeydown(i: number, e: KeyboardEvent) {
 
 function onPaste(e: ClipboardEvent) {
   e.preventDefault();
-  const text = (e.clipboardData?.getData("text") ?? "").replace(/\D/g, "").slice(0, props.length);
-  digits.value = Array(props.length).fill("").map((_, i) => text[i] ?? "");
+  const text = (e.clipboardData?.getData("text") ?? "")
+    .replace(/\D/g, "")
+    .slice(0, props.length);
+  digits.value = Array(props.length)
+    .fill("")
+    .map((_, i) => text[i] ?? "");
   emit("update:modelValue", digits.value.join(""));
   inputRefs.value[Math.min(text.length, props.length - 1)]?.focus();
 }

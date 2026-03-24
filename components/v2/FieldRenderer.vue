@@ -60,6 +60,15 @@ function fieldProps() {
       @update:model-value="value = $event"
     />
 
+    <!-- full address group -->
+    <BaseFullAddress
+      v-else-if="field.component === 'UFullAddress'"
+      :field="field"
+      :model-value="value"
+      :disabled="disabled"
+      @update:model-value="value = $event"
+    />
+
     <!-- cascading address -->
     <BaseAddress
       v-else-if="field.component === 'UAddress'"

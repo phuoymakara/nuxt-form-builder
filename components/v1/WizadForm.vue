@@ -120,7 +120,7 @@ import type {
   FieldWithConditions,
   ObjectGeneric,
 } from "~/types/form-builder";
-import { resolveComponentMap } from "../common/ui-helper";
+import { resolveComponentMap } from "~/utils/ui-helper";
 import { getColumnClass } from "./style-helper";
 
 const props = defineProps<{

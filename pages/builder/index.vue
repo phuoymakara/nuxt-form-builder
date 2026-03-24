@@ -295,6 +295,14 @@ const {
   showPreview, showLoad, previewConfig, previewKey,
   save, loadSaved, exportJson, openPreview,
 } = useFormPersistence({ pages, formTitle, formId, isMultiStep, activePageIdx, activeSectionIdx, selectedId, rightPanel });
+
+// ── WYSIWYG canvas helpers ──
+
+const COL_SPAN_CLASS: Record<number, string> = {
+  1: "col-span-1", 2: "col-span-2", 3: "col-span-3", 4: "col-span-4",
+  5: "col-span-5", 6: "col-span-6", 7: "col-span-7", 8: "col-span-8",
+  9: "col-span-9", 10: "col-span-10", 11: "col-span-11", 12: "col-span-12",
+};
 </script>
 
 <template>
@@ -451,7 +459,7 @@ const {
           class="flex-1 p-6 overflow-y-auto"
           style="scrollbar-width: none; scrollbar-color: #e5e7eb transparent"
         >
-          <div class="max-w-4xl mx-auto space-y-4">
+          <div class="max-w-5xl mx-auto space-y-4">
             <!-- Section tabs -->
             <div class="flex items-center gap-2 flex-wrap">
               <button
@@ -600,10 +608,9 @@ const {
                         />
                       </div>
 
-                      <!-- Fields inside row -->
+                      <!-- Fields inside row — WYSIWYG grid -->
                       <div
-                        class="p-2 grid gap-1 min-h-10 group/row"
-                        style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))"
+                        class="p-2 grid grid-cols-12 gap-2 min-h-10"
                         @dragover.prevent="dragOverSectionId = currentSection!._id; dragOverIndex = row.fields.length; dragOverRowId = row._id"
                         @dragleave="dragOverSectionId = null; dragOverIndex = null; dragOverRowId = null"
                         @drop.prevent="onDropToRow(currentSection!._id, row._id, row.fields.length, $event)"
@@ -611,36 +618,110 @@ const {
                         <div
                           v-for="(field, fi) in row.fields"
                           :key="field._id"
-                          class="group/field min-w-0 flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 cursor-pointer transition-all text-xs"
-                          :class="selectedId === field._id ? 'border-primary-400 bg-primary-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'"
+                          class="relative group/field"
+                          :class="COL_SPAN_CLASS[field.colSpan ?? 12]"
                           draggable="true"
-                          @click.stop="selectField(field._id)"
                           @dragstart="onCanvasDragStart(field._id, currentSection!._id, $event)"
                           @dragover.prevent.stop="dragOverSectionId = currentSection!._id; dragOverIndex = fi; dragOverRowId = row._id"
                           @drop.prevent.stop="onDropToRow(currentSection!._id, row._id, fi, $event)"
                         >
-                          <UIcon name="i-heroicons-bars-2" class="size-3 text-gray-300 shrink-0 cursor-grab" />
-                          <div class="min-w-0 flex-1">
-                            <p class="font-medium text-gray-800 truncate">{{ field.label || field.name }}</p>
-                            <p class="text-gray-400 flex items-center gap-1 truncate">
-                              {{ field.component }}
-                              <UBadge v-if="field._group" color="primary" variant="subtle" size="xs">{{ field._group }}</UBadge>
-                              <span v-if="field.required" class="text-red-400">req</span>
-                              <span v-if="duplicateNames.has(field.name)" class="text-orange-500 flex items-center gap-0.5">
-                                <UIcon name="i-heroicons-exclamation-triangle" class="size-3" />dup
-                              </span>
-                            </p>
+                          <!-- WYSIWYG field card -->
+                          <div
+                            class="h-full border rounded-xl overflow-hidden cursor-pointer transition-all select-none"
+                            :class="selectedId === field._id
+                              ? 'border-primary-400 shadow-sm ring-1 ring-primary-200'
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'"
+                            @click.stop="selectField(field._id)"
+                          >
+                            <!-- Card toolbar -->
+                            <div class="flex items-center justify-between px-2.5 py-1 border-b bg-gray-50 border-gray-100">
+                              <div class="flex items-center gap-1.5 min-w-0">
+                                <UIcon name="i-heroicons-bars-2" class="size-3.5 text-gray-300 shrink-0 cursor-grab" />
+                                <span class="text-xs text-gray-400 font-mono truncate">{{ field.component }}</span>
+                                <UBadge v-if="field._group" color="primary" variant="subtle" size="xs">{{ field._group }}</UBadge>
+                                <UBadge v-if="duplicateNames.has(field.name)" color="warning" variant="subtle" size="xs">dup</UBadge>
+                              </div>
+                              <div class="flex items-center gap-1 shrink-0">
+                                <span class="text-xs text-gray-300 font-mono">{{ field.colSpan ?? 12 }}/12</span>
+                                <UButton size="xs" variant="ghost" color="neutral" icon="i-heroicons-document-duplicate"
+                                  class="opacity-0 group-hover/field:opacity-100 transition-opacity"
+                                  @click.stop="duplicateField(field._id)" />
+                                <UButton size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
+                                  class="opacity-0 group-hover/field:opacity-100 transition-opacity"
+                                  @click.stop="removeField(field._id)" />
+                              </div>
+                            </div>
+
+                            <!-- Label + mock input -->
+                            <div class="px-3 py-2.5 space-y-1.5" :class="selectedId === field._id ? 'bg-primary-50' : 'bg-white'">
+                              <div class="flex items-center gap-1">
+                                <span class="text-sm text-gray-700 leading-snug">{{ field.label || field.name }}</span>
+                                <span v-if="field.required" class="text-red-500 text-sm leading-none">*</span>
+                              </div>
+
+                              <!-- Text / Number / Textarea / AsyncSelect / Address / Calendar -->
+                              <div
+                                v-if="['UInput','UTextarea','UAsyncSelect','UAddress','UCalendar','UTagInput','UOtpInput','UDateRange'].includes(field.component)"
+                                class="h-8 border border-gray-200 rounded-md bg-white flex items-center px-3 gap-2"
+                              >
+                                <span class="text-xs text-gray-300 truncate flex-1">{{ field.placeholder || "" }}</span>
+                                <UIcon v-if="field.component === 'UCalendar' || field.component === 'UDateRange'" name="i-heroicons-calendar-days" class="size-3.5 text-gray-300 shrink-0" />
+                                <UIcon v-else-if="['UAddress','UAsyncSelect'].includes(field.component)" name="i-heroicons-magnifying-glass" class="size-3.5 text-gray-300 shrink-0" />
+                              </div>
+
+                              <!-- Select / SelectMenu -->
+                              <div
+                                v-else-if="['USelect','USelectMenu'].includes(field.component)"
+                                class="h-8 border border-gray-200 rounded-md bg-white flex items-center px-3 justify-between"
+                              >
+                                <span class="text-xs text-gray-300">{{ field.placeholder || "" }}</span>
+                                <UIcon name="i-heroicons-chevron-up-down" class="size-3.5 text-gray-300" />
+                              </div>
+
+                              <!-- Radio -->
+                              <div v-else-if="field.component === 'URadioGroup'" class="flex items-center gap-3 py-0.5 flex-wrap">
+                                <div v-for="item in (field.items ?? []).slice(0, 3)" :key="item.value" class="flex items-center gap-1">
+                                  <div class="size-3 rounded-full border border-gray-300 bg-white shrink-0" />
+                                  <span class="text-xs text-gray-400">{{ item.label }}</span>
+                                </div>
+                                <span v-if="!(field.items?.length)" class="text-xs text-gray-300 italic">No options</span>
+                              </div>
+
+                              <!-- Checkbox -->
+                              <div v-else-if="field.component === 'UCheckboxGroup'" class="flex items-center gap-3 py-0.5 flex-wrap">
+                                <div v-for="item in (field.items ?? []).slice(0, 3)" :key="item.value" class="flex items-center gap-1">
+                                  <div class="size-3 rounded border border-gray-300 bg-white shrink-0" />
+                                  <span class="text-xs text-gray-400">{{ item.label }}</span>
+                                </div>
+                                <span v-if="!(field.items?.length)" class="text-xs text-gray-300 italic">No options</span>
+                              </div>
+
+                              <!-- Switch -->
+                              <div v-else-if="field.component === 'USwitch'" class="flex items-center gap-2 py-0.5">
+                                <div class="w-8 h-4 rounded-full bg-gray-200 flex items-center px-0.5">
+                                  <div class="size-3 rounded-full bg-white shadow-sm" />
+                                </div>
+                              </div>
+
+                              <!-- File -->
+                              <div
+                                v-else-if="['UFileInput','UFileUpload'].includes(field.component)"
+                                class="h-8 border-2 border-dashed border-gray-200 rounded-md bg-white flex items-center justify-center gap-1.5"
+                              >
+                                <UIcon name="i-heroicons-paper-clip" class="size-3.5 text-gray-300" />
+                                <span class="text-xs text-gray-300">Upload file</span>
+                              </div>
+
+                              <!-- Table / Repeater -->
+                              <div
+                                v-else-if="['UTable','URepeater'].includes(field.component)"
+                                class="h-8 border border-gray-200 rounded-md bg-white flex items-center px-3 gap-2"
+                              >
+                                <UIcon name="i-heroicons-table-cells" class="size-3.5 text-gray-300 shrink-0" />
+                                <span class="text-xs text-gray-300">{{ field.component === 'UTable' ? 'Table' : 'Repeater' }}</span>
+                              </div>
+                            </div>
                           </div>
-                          <UButton
-                            size="xs" variant="ghost" color="neutral" icon="i-heroicons-document-duplicate"
-                            class="opacity-0 group-hover/field:opacity-100 transition-opacity shrink-0"
-                            @click.stop="duplicateField(field._id)"
-                          />
-                          <UButton
-                            size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
-                            class="opacity-0 group-hover/field:opacity-100 transition-opacity shrink-0"
-                            @click.stop="removeField(field._id)"
-                          />
                         </div>
                       </div>
                     </div>
